@@ -67,7 +67,9 @@
     canvas.firstElementChild.style.transform = `scale(${ui.zoom})${ui.side === "back" ? " scaleX(-1)" : ""}`;
     $("#zoom-level").textContent = Math.round(ui.zoom * 100) + "%";
     $("#preview-caption").textContent = `${s.material.short} · ${ui.side === "back" ? "Back" : "Front"}`;
-    $("#progress").textContent = `Step 1 of ${CFG.steps.length} · ${CFG.steps[0]}`;
+    $("#progress-step").textContent = `Step 1 of ${CFG.steps.length}`;
+    $("#progress-name").textContent = CFG.steps[0];
+    $("#progress-fill").style.width = `${100 / CFG.steps.length}%`;
   }
 
   function render() {
@@ -75,8 +77,9 @@
     renderPreview();
   }
 
-  document.querySelectorAll("input[name=side]").forEach((input) => input.addEventListener("change", () => {
-    ui.side = input.value;
+  document.querySelectorAll("[data-side]").forEach((btn) => btn.addEventListener("click", () => {
+    ui.side = btn.dataset.side;
+    document.querySelectorAll("[data-side]").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
     renderPreview();
   }));
 
