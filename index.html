@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>AZX Lanyard Configurator</title>
   <meta name="description" content="Design your custom lanyard and see a live preview.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -18,34 +15,30 @@
 
   <main class="layout">
     <!-- Left: live preview -->
-    <section class="preview" aria-label="Lanyard preview">
-      <div class="preview-card">
-        <div class="preview-toolbar">
-          <div class="segmented" role="group" aria-label="Preview view">
-            <button type="button" data-view="flat" aria-pressed="true">Flat lay</button>
-            <button type="button" data-view="worn" disabled title="Coming soon">Worn</button>
-          </div>
-          <div class="segmented" role="group" aria-label="Side">
-            <button type="button" data-side="front" aria-pressed="true">Front</button>
-            <button type="button" data-side="back" aria-pressed="false">Back</button>
-          </div>
-        </div>
-        <div class="preview-stage">
-          <div id="preview-canvas" class="preview-canvas"></div>
-          <div class="zoom" role="group" aria-label="Zoom">
-            <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
-            <button type="button" id="zoom-reset" aria-label="Reset zoom"><span id="zoom-level">100%</span></button>
-            <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
-          </div>
-        </div>
-        <div class="preview-meta" id="preview-caption"></div>
-      </div>
-      <p class="preview-note">Illustration only. Colours are matched to Pantone on your proof.</p>
-    </section>
+    <fieldset class="preview">
+      <legend>Preview</legend>
+      <p class="controls">
+        View:
+        <label><input type="radio" name="view" value="flat" checked> Flat lay</label>
+        <label><input type="radio" name="view" value="worn" disabled> Worn (coming soon)</label>
+        &nbsp;|&nbsp; Side:
+        <label><input type="radio" name="side" value="front" checked> Front</label>
+        <label><input type="radio" name="side" value="back"> Back</label>
+      </p>
+      <div id="preview-canvas" class="preview-canvas"></div>
+      <p class="controls">
+        Zoom:
+        <button type="button" id="zoom-out">−</button>
+        <button type="button" id="zoom-reset"><span id="zoom-level">100%</span></button>
+        <button type="button" id="zoom-in">+</button>
+      </p>
+      <p id="preview-caption"></p>
+      <p><small>Illustration only. Colours are matched to Pantone on your proof.</small></p>
+    </fieldset>
 
     <!-- Right: option steps (only Material is built so far) -->
     <section class="builder" aria-label="Lanyard options">
-      <div id="steps" class="steps"></div>
+      <div id="steps"></div>
     </section>
   </main>
 

@@ -75,9 +75,8 @@
     renderPreview();
   }
 
-  document.querySelectorAll("[data-side]").forEach((btn) => btn.addEventListener("click", () => {
-    ui.side = btn.dataset.side;
-    document.querySelectorAll("[data-side]").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+  document.querySelectorAll("input[name=side]").forEach((input) => input.addEventListener("change", () => {
+    ui.side = input.value;
     renderPreview();
   }));
 
