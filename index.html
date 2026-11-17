@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AZX Lanyard Configurator</title>
+  <meta name="description" content="Design your custom lanyard and see a live preview.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">AZX</span>
+        <span class="brand-text"><strong>AZX Sport</strong><span>Lanyard Configurator</span></span>
+      </a>
+      <span class="progress" id="progress"></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Left: live preview -->
+    <section class="preview" aria-label="Lanyard preview">
+      <div class="preview-card">
+        <div class="preview-toolbar">
+          <div class="segmented" role="group" aria-label="Preview view">
+            <button type="button" data-view="flat" aria-pressed="true">Flat lay</button>
+            <button type="button" data-view="worn" disabled title="Coming soon">Worn</button>
+          </div>
+          <div class="segmented" role="group" aria-label="Side">
+            <button type="button" data-side="front" aria-pressed="true">Front</button>
+            <button type="button" data-side="back" aria-pressed="false">Back</button>
+          </div>
+        </div>
+        <div class="preview-stage">
+          <div id="preview-canvas" class="preview-canvas"></div>
+          <div class="zoom" role="group" aria-label="Zoom">
+            <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+            <button type="button" id="zoom-reset" aria-label="Reset zoom"><span id="zoom-level">100%</span></button>
+            <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+          </div>
+        </div>
+        <div class="preview-meta" id="preview-caption"></div>
+      </div>
+      <p class="preview-note">Illustration only. Colours are matched to Pantone on your proof.</p>
+    </section>
+
+    <!-- Right: option steps (only Material is built so far) -->
+    <section class="builder" aria-label="Lanyard options">
+      <div id="steps" class="steps"></div>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
