@@ -61,17 +61,13 @@
     },
     {
       id: "width",
-      title: "Width",
-      summary: () => resolved().width.label,
-      body: () => radios("width", CFG.widths.map((w) => ({ id: w.id, text: w.label })), state.width, "Strap width",
-        (id) => set({ width: id })),
-    },
-    {
-      id: "length",
-      title: "Length",
-      summary: () => resolved().length.label,
-      body: () => radios("length", CFG.lengths.map((l) => ({ id: l.id, text: `${l.label} (${l.note})` })), state.length, "Strap length",
-        (id) => set({ length: id })),
+      title: "Width & length",
+      summary: () => `${resolved().width.label} × ${resolved().length.label}`,
+      body: () => h("div", {},
+        radios("width", CFG.widths.map((w) => ({ id: w.id, text: w.label })), state.width, "Width",
+          (id) => set({ width: id })),
+        radios("length", CFG.lengths.map((l) => ({ id: l.id, text: `${l.label} (${l.note})` })), state.length, "Length",
+          (id) => set({ length: id }))),
     },
   ];
 

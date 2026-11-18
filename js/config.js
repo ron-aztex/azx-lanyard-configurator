@@ -4,7 +4,7 @@
  * hardware come in later steps.
  */
 window.LANYARD_CONFIG = {
-  steps: ["Material", "Width", "Length", "Colours", "Imprint", "Breakaway", "End finish", "Buckle", "Attachment", "Quote"],
+  steps: ["Material", "Width & length", "Colour & design", "Imprint", "Safety breakaway", "Fittings", "Detachable buckle", "Hook & attachment", "Badge holder & add-ons", "Quantity & quote"],
 
   materials: [
     {
