@@ -1,6 +1,6 @@
 /*
  * Catalogue for the lanyard configurator. Add options here; the UI reads from it.
- * Only materials are wired up so far. Widths, lengths, colours, imprint and
+ * Materials, widths and lengths are wired up so far. Colours, imprint and
  * hardware come in later steps.
  */
 window.LANYARD_CONFIG = {
@@ -34,10 +34,26 @@ window.LANYARD_CONFIG = {
     },
   ],
 
-  // Placeholders until the Width and Colours steps exist.
+  widths: [
+    { id: "3-8", label: '3/8"', inches: 0.375 },
+    { id: "1-2", label: '1/2"', inches: 0.5 },
+    { id: "5-8", label: '5/8"', inches: 0.625 },
+    { id: "3-4", label: '3/4"', inches: 0.75 },
+    { id: "7-8", label: '7/8"', inches: 0.875 },
+    { id: "1",   label: '1"',   inches: 1.0 },
+  ],
+
+  lengths: [
+    { id: "32", label: '32"', inches: 32, note: '16" drop' },
+    { id: "36", label: '36"', inches: 36, note: '18" drop, standard' },
+    { id: "40", label: '40"', inches: 40, note: '20" drop' },
+  ],
+
+  // strapColour is a placeholder until the Colours step exists.
   defaults: {
     material: "silkscreen-flat",
-    widthInches: 0.75,
+    width: "3-4",
+    length: "36",
     strapColour: "#1f4fbf",
   },
 };

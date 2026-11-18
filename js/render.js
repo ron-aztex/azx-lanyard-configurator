@@ -19,9 +19,10 @@
   }
 
   function renderLanyard(s) {
-    const w = s.widthInches * U;
+    const w = s.width.inches * U;
     const tex = TEXTURES[s.material.texture];
-    const yTop = 70, halfTop = 92, yJoin = 610, yTail = 650;
+    // The drop (half the length) sets how far the strap hangs: 27 units per inch.
+    const yTop = 70, halfTop = 92, yJoin = yTop + (s.length.inches / 2) * 27, yTail = yJoin + 40;
 
     // One path for the whole loop; stroking it at the strap width gives the band.
     const loop = `M${CX} ${yJoin} L${CX - halfTop} ${yTop + 40} Q${CX - halfTop} ${yTop} ${CX} ${yTop} Q${CX + halfTop} ${yTop} ${CX + halfTop} ${yTop + 40} L${CX} ${yJoin} L${CX} ${yTail}`;

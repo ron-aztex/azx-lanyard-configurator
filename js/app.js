@@ -9,7 +9,8 @@
 
   const state = {
     material: CFG.defaults.material,
-    widthInches: CFG.defaults.widthInches,
+    width: CFG.defaults.width,
+    length: CFG.defaults.length,
     strapColour: CFG.defaults.strapColour,
   };
   const ui = { side: "front", zoom: 1 };
@@ -24,7 +25,20 @@
     return el;
   }
 
-  const resolved = () => ({ ...state, material: byId(CFG.materials, state.material) });
+  const resolved = () => ({
+    ...state,
+    material: byId(CFG.materials, state.material),
+    width: byId(CFG.widths, state.width),
+    length: byId(CFG.lengths, state.length),
+  });
+
+  // Plain radio list for a step; styled later.
+  const radios = (name, options, current, label, onpick) =>
+    h("fieldset", {}, h("legend", {}, label), options.map((o) =>
+      h("label", {},
+        h("input", { type: "radio", name, value: o.id, checked: o.id === current, onchange: () => onpick(o.id) }),
+        " " + o.text,
+        h("br"))));
 
   const STEPS = [
     {
@@ -44,6 +58,20 @@
             h("strong", {}, m.name),
             h("span", {}, m.blurb),
             m.badge ? h("span", { class: "badge" }, m.badge) : null)))),
+    },
+    {
+      id: "width",
+      title: "Width",
+      summary: () => resolved().width.label,
+      body: () => radios("width", CFG.widths.map((w) => ({ id: w.id, text: w.label })), state.width, "Strap width",
+        (id) => set({ width: id })),
+    },
+    {
+      id: "length",
+      title: "Length",
+      summary: () => resolved().length.label,
+      body: () => radios("length", CFG.lengths.map((l) => ({ id: l.id, text: `${l.label} (${l.note})` })), state.length, "Strap length",
+        (id) => set({ length: id })),
     },
   ];
 
@@ -68,7 +96,7 @@
     canvas.innerHTML = window.LanyardRender.renderLanyard(s);
     canvas.firstElementChild.style.transform = `scale(${ui.zoom})${ui.side === "back" ? " scaleX(-1)" : ""}`;
     $("#zoom-level").textContent = Math.round(ui.zoom * 100) + "%";
-    $("#preview-caption").textContent = `${s.material.short} · ${ui.side === "back" ? "Back" : "Front"}`;
+    $("#preview-caption").textContent = `${s.material.short} · ${s.width.label} × ${s.length.label} · ${ui.side === "back" ? "Back" : "Front"}`;
     $("#progress-step").textContent = `Step 1 of ${CFG.steps.length}`;
     $("#progress-name").textContent = CFG.steps[0];
     $("#progress-fill").style.width = `${100 / CFG.steps.length}%`;
