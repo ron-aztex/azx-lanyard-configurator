@@ -30,21 +30,20 @@
     {
       id: "material",
       title: "Material",
-      body: () => CFG.materials.map((m) =>
-        h("label", { class: "option" },
-          h("input", {
-            type: "radio",
-            name: "material",
-            value: m.id,
-            checked: m.id === state.material,
-            onchange: () => set({ material: m.id }),
-          }),
-          h("img", { src: m.swatch, alt: "", width: "60", height: "60" }),
-          h("span", {},
-            h("b", {}, m.name),
-            m.badge ? ` (${m.badge})` : null,
-            h("br"),
-            m.blurb))),
+      summary: () => resolved().material.short,
+      body: () => h("div", { class: "material-list", role: "radiogroup", "aria-label": "Material" }, CFG.materials.map((m) =>
+        h("button", {
+          type: "button",
+          role: "radio",
+          class: "material" + (m.id === state.material ? " is-selected" : ""),
+          "aria-checked": String(m.id === state.material),
+          onclick: () => set({ material: m.id }),
+        },
+          h("img", { src: m.swatch, alt: "" }),
+          h("span", { class: "material-text" },
+            h("strong", {}, m.name),
+            h("span", {}, m.blurb),
+            m.badge ? h("span", { class: "badge" }, m.badge) : null)))),
     },
   ];
 
@@ -55,9 +54,12 @@
 
   function renderSteps() {
     $("#steps").replaceChildren(...STEPS.map((step, i) =>
-      h("fieldset", {},
-        h("legend", {}, `Step ${i + 1}: ${step.title}`),
-        step.body())));
+      h("section", { class: "step is-open", id: "step-" + step.id },
+        h("div", { class: "step-head" },
+          h("span", { class: "step-num" }, String(i + 1)),
+          h("h2", { class: "step-title" }, step.title),
+          h("span", { class: "step-summary" }, step.summary())),
+        h("div", { class: "step-body" }, step.body()))));
   }
 
   function renderPreview() {
