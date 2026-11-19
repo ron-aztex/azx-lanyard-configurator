@@ -32,13 +32,16 @@
     length: byId(CFG.lengths, state.length),
   });
 
-  // Plain radio list for a step; styled later.
-  const radios = (name, options, current, label, onpick) =>
-    h("fieldset", {}, h("legend", {}, label), options.map((o) =>
-      h("label", {},
-        h("input", { type: "radio", name, value: o.id, checked: o.id === current, onchange: () => onpick(o.id) }),
-        " " + o.text,
-        h("br"))));
+  // Segmented control: one pressed button out of a few short options.
+  const seg = (options, current, label, onpick) =>
+    h("div", { class: "segmented", role: "radiogroup", "aria-label": label }, options.map(([id, text]) =>
+      h("button", {
+        type: "button",
+        role: "radio",
+        class: id === current ? "is-selected" : null,
+        "aria-checked": String(id === current),
+        onclick: () => onpick(id),
+      }, text)));
 
   const STEPS = [
     {
@@ -63,11 +66,20 @@
       id: "width",
       title: "Width & length",
       summary: () => `${resolved().width.label} × ${resolved().length.label}`,
-      body: () => h("div", {},
-        radios("width", CFG.widths.map((w) => ({ id: w.id, text: w.label })), state.width, "Width",
-          (id) => set({ width: id })),
-        radios("length", CFG.lengths.map((l) => ({ id: l.id, text: `${l.label} (${l.note})` })), state.length, "Length",
-          (id) => set({ length: id }))),
+      body: () => h("div", { class: "stack" },
+        h("div", { class: "widths", role: "radiogroup", "aria-label": "Width" }, CFG.widths.map((w) =>
+          h("button", {
+            type: "button",
+            role: "radio",
+            class: "width" + (w.id === state.width ? " is-selected" : ""),
+            "aria-checked": String(w.id === state.width),
+            onclick: () => set({ width: w.id }),
+          },
+            h("span", { class: "width-bar", style: `height:${Math.round(w.inches * 30)}px;background:${state.strapColour}` }),
+            h("span", {}, w.label)))),
+        h("div", { class: "field" },
+          h("span", {}, "Length"),
+          seg(CFG.lengths.map((l) => [l.id, `${l.label} · ${l.note}`]), state.length, "Length", (id) => set({ length: id })))),
     },
   ];
 

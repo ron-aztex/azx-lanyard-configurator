@@ -13,7 +13,7 @@ npx serve .
 - [x] Layout: live preview on the left, option steps on the right
 - [x] Preview: flat lay, front/back, zoom
 - [x] Step 1, Material (silkscreen, woven, dye-sub satin) with real fabric textures
-- [x] Step 2, Width & length (3/8" to 1"; 32", 36", 40"): plain radios for now; the preview strap gets wider and hangs lower
+- [x] Step 2, Width & length (3/8" to 1"; 32", 36", 40"): styled like the design: width cards and a length segmented control; the preview strap gets wider and hangs lower
 - [ ] Colours, designs
 - [ ] Imprint (text + logo)
 - [ ] Hardware: breakaway, end finish, buckle, attachment, add-ons
