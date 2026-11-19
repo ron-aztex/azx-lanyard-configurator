@@ -1,7 +1,8 @@
 /*
  * Draws the lanyard preview as an SVG string.
- * First pass: a flat-lay strap loop with the material's fabric texture and a
- * simple drawn hook. Hardware images, imprint and the worn view come later.
+ * First pass: a flat-lay strap loop with the material's fabric texture, the
+ * chosen colours/design and a simple drawn hook. Hardware images, imprint and
+ * the worn view come later.
  */
 (function () {
   const U = 40; // drawing units per inch
@@ -18,6 +19,70 @@
     return "#" + [n >> 16, (n >> 8) & 255, n & 255].map((v) => ch(v).toString(16).padStart(2, "0")).join("");
   }
 
+  // Pattern tiles for the two-colour designs, in a leg's local frame
+  // (x along the strap, y across it, centred on 0).
+  function designPattern(d, w) {
+    const c2 = d.colour2;
+    const tile = (pw, ph, body, extra) =>
+      `<pattern id="dz" width="${pw}" height="${ph}" patternUnits="userSpaceOnUse" y="${-w / 2}" ${extra || ""}>${body}</pattern>`;
+    switch (d.style) {
+      case "dots": {
+        const p = w * 0.42;
+        return tile(p, p, `<circle cx="${p / 2}" cy="${p / 2}" r="${p * 0.2}" fill="${c2}"/>`);
+      }
+      case "chevron": {
+        const p = w / 2;
+        return tile(p, w, `<path d="M0,0 L${p / 2},${w / 2} L0,${w} M${p / 2},0 L${p},${w / 2} L${p / 2},${w}" stroke="${c2}" stroke-width="${p * 0.22}" fill="none"/>`);
+      }
+      case "diagonal": {
+        const p = w * 0.5;
+        return tile(p, p, `<rect width="${p / 2}" height="${p}" fill="${c2}"/>`, `patternTransform="rotate(45)"`);
+      }
+      case "checks": {
+        const p = w / 2;
+        return tile(p * 2, p * 2, `<rect width="${p}" height="${p}" fill="${c2}"/><rect x="${p}" y="${p}" width="${p}" height="${p}" fill="${c2}"/>`);
+      }
+      case "photo": {
+        if (!d.photo) return "";
+        const pw = w * (d.photoAspect || 1);
+        return tile(pw, w, `<image href="${d.photo}" width="${pw}" height="${w}" preserveAspectRatio="xMidYMid slice"/>`);
+      }
+      default:
+        return "";
+    }
+  }
+
+  // The strap's colours and design. Stripes are nested strokes, so they follow
+  // the curve too. Gradients and patterns are drawn on the two straight legs in
+  // each leg's own frame (so they run along the strap); the short top curve and
+  // the tail stay a plain colour. Everything is masked to the strap's outline.
+  function strapDesign(s, loop, legs, w, tail) {
+    const d = s.design, c1 = s.strapColour, c2 = d.colour2;
+    const stroke = (colour, width, path) => `<path d="${path || loop}" fill="none" stroke="${colour}" stroke-width="${width}" stroke-linejoin="round"/>`;
+    const leg = (g, fill) => `<g transform="translate(${g.x} ${g.y}) rotate(${g.deg})"><rect x="-20" y="${-w / 2}" width="${g.len + 40}" height="${w}" fill="${fill}"/></g>`;
+    let defs = "", body;
+    switch (d.style) {
+      case "stripe-centre":
+        body = stroke(c1, w) + stroke(c2, w * 0.28);
+        break;
+      case "stripe-edges":
+        body = stroke(c1, w) + stroke(c2, w * 0.9) + stroke(c1, w * 0.6);
+        break;
+      case "gradient":
+        // Each leg runs from the hook end (main colour) to the top (second colour).
+        defs = legs.map((g, i) => `<linearGradient id="gr${i}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${g.len}" y2="0">
+            <stop offset="0" stop-color="${g.fromJoin ? c1 : c2}"/><stop offset="1" stop-color="${g.fromJoin ? c2 : c1}"/></linearGradient>`).join("");
+        body = stroke(c2, w) + legs.map((g, i) => leg(g, `url(#gr${i})`)).join("") + stroke(c1, w, tail);
+        break;
+      default: {
+        const pattern = designPattern(d, w);
+        defs = pattern;
+        body = stroke(c1, w) + (pattern ? legs.map((g) => leg(g, "url(#dz)")).join("") : "");
+      }
+    }
+    return { defs, body };
+  }
+
   function renderLanyard(s) {
     const w = s.width.inches * U;
     const tex = TEXTURES[s.material.texture];
@@ -27,6 +92,12 @@
     // One path for the whole loop; stroking it at the strap width gives the band.
     const loop = `M${CX} ${yJoin} L${CX - halfTop} ${yTop + 40} Q${CX - halfTop} ${yTop} ${CX} ${yTop} Q${CX + halfTop} ${yTop} ${CX + halfTop} ${yTop + 40} L${CX} ${yJoin} L${CX} ${yTail}`;
     const band = (stroke, extra) => `<path d="${loop}" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round" ${extra || ""}/>`;
+
+    // The two straight legs, each with its start point, angle and length.
+    const legFrom = (x1, y1, x2, y2, fromJoin) =>
+      ({ x: x1, y: y1, deg: (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI, len: Math.hypot(x2 - x1, y2 - y1), fromJoin });
+    const legs = [legFrom(CX, yJoin, CX - halfTop, yTop + 40, true), legFrom(CX + halfTop, yTop + 40, CX, yJoin, false)];
+    const design = strapDesign(s, loop, legs, w, `M${CX} ${yJoin} L${CX} ${yTail}`);
 
     const hookTop = yTail + 4;
     const hook = `
@@ -42,12 +113,14 @@
           <pattern id="tex" patternUnits="userSpaceOnUse" width="${tex.w}" height="${tex.h}">
             <image href="${tex.href}" width="${tex.w}" height="${tex.h}"/>
           </pattern>
+          ${design.defs}
+          <mask id="strap-shape" maskUnits="userSpaceOnUse" x="0" y="0" width="440" height="760">${band("#fff")}</mask>
           <filter id="drop" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#0b1220" flood-opacity=".18"/>
           </filter>
         </defs>
         <g filter="url(#drop)">
-          ${band(s.strapColour)}
+          <g mask="url(#strap-shape)">${design.body}</g>
           ${band("url(#tex)", `opacity="${tex.opacity}" style="mix-blend-mode:multiply"`)}
           ${band(shade(s.strapColour, 0.18), `stroke-width="${w * 0.12}" opacity=".25" transform="translate(${-w * 0.3} 0)"`)}
         </g>

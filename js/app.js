@@ -12,6 +12,11 @@
     width: CFG.defaults.width,
     length: CFG.defaults.length,
     strapColour: CFG.defaults.strapColour,
+    designStyle: CFG.defaults.designStyle,
+    colour2: CFG.defaults.colour2,
+    photo: null,
+    photoAspect: 1,
+    photoName: "",
   };
   const ui = { side: "front", zoom: 1 };
 
@@ -25,12 +30,24 @@
     return el;
   }
 
-  const resolved = () => ({
-    ...state,
-    material: byId(CFG.materials, state.material),
-    width: byId(CFG.widths, state.width),
-    length: byId(CFG.lengths, state.length),
-  });
+  const resolved = () => {
+    const material = byId(CFG.materials, state.material);
+    return {
+      ...state,
+      material,
+      width: byId(CFG.widths, state.width),
+      length: byId(CFG.lengths, state.length),
+      // Designs only apply on materials that can print them; others are always solid.
+      design: material.designs
+        ? { style: state.designStyle, colour2: state.colour2, photo: state.photo, photoAspect: state.photoAspect }
+        : { style: "solid", colour2: state.colour2 },
+    };
+  };
+
+  const colourName = (hex) => {
+    const c = CFG.colours.find((c) => c.hex.toLowerCase() === hex.toLowerCase());
+    return c ? c.name : "Custom " + hex.toUpperCase();
+  };
 
   // Segmented control: one pressed button out of a few short options.
   const seg = (options, current, label, onpick) =>
@@ -42,6 +59,37 @@
         "aria-checked": String(id === current),
         onclick: () => onpick(id),
       }, text)));
+
+  // Plain colour picker: one radio per palette colour plus a custom colour input.
+  function colourPicker(name, legend, current, onpick) {
+    const isCustom = !CFG.colours.some((c) => c.hex.toLowerCase() === current.toLowerCase());
+    return h("fieldset", {}, h("legend", {}, legend),
+      CFG.colours.map((c) => h("label", {},
+        h("input", { type: "radio", name, value: c.hex, checked: c.hex.toLowerCase() === current.toLowerCase(), onchange: () => onpick(c.hex) }),
+        " " + c.name, h("br"))),
+      h("label", {},
+        h("input", { type: "radio", name, value: "custom", checked: isCustom, onchange: (e) => e.target.parentNode.querySelector("input[type=color]").click() }),
+        " Custom: ",
+        // change (not input) so the native picker isn't torn down by a re-render while it's open
+        h("input", { type: "color", value: current, "aria-label": legend + ", custom", onchange: (e) => onpick(e.target.value) })));
+  }
+
+  // Background image for the "Your image" design: downscaled so the preview stays light.
+  function loadPhoto(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.naturalWidth * k));
+      c.height = Math.max(1, Math.round(img.naturalHeight * k));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      set({ photo: c.toDataURL("image/jpeg", 0.88), photoAspect: c.width / c.height, photoName: file.name });
+    };
+    img.src = url;
+  }
 
   const STEPS = [
     {
@@ -81,6 +129,32 @@
           h("span", {}, "Length"),
           seg(CFG.lengths.map((l) => [l.id, `${l.label} · ${l.note}`]), state.length, "Length", (id) => set({ length: id })))),
     },
+    {
+      id: "colour",
+      title: "Colour & design",
+      summary: () => {
+        const r = resolved();
+        return colourName(state.strapColour) + (r.design.style !== "solid" ? " · " + byId(CFG.designStyles, r.design.style).name : "");
+      },
+      body: () => {
+        const style = resolved().design.style;
+        const designs = resolved().material.designs;
+        const twoColour = !["solid", "photo"].includes(style);
+        return h("div", {},
+          designs ? h("fieldset", {}, h("legend", {}, "Design"), CFG.designStyles.map((d) => h("label", {},
+            h("input", { type: "radio", name: "design", value: d.id, checked: d.id === style, onchange: () => set({ designStyle: d.id }) }),
+            " " + d.name, h("br")))) : null,
+          colourPicker("strap-colour", twoColour ? "Main colour" : "Strap colour", state.strapColour, (hex) => set({ strapColour: hex })),
+          twoColour ? colourPicker("colour2", "Second colour", state.colour2, (hex) => set({ colour2: hex })) : null,
+          style === "photo" ? h("fieldset", {}, h("legend", {}, "Background image"),
+            h("p", {}, "A wide photo or pattern works best. It repeats along the strap."),
+            h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", onchange: (e) => loadPhoto(e.target.files[0]) }),
+            state.photo ? h("p", {}, "Uploaded: " + state.photoName + " ",
+              h("button", { type: "button", onclick: () => set({ photo: null, photoName: "" }) }, "Remove")) : null) : null,
+          designs ? null : h("p", {}, "Want stripes, gradients or a photo? Choose Digital Sublimation for full-colour designs."),
+          h("p", {}, "Screen colours are approximate. We match to Pantone (PMS) on your proof."));
+      },
+    },
   ];
 
   function set(patch) {
@@ -104,7 +178,7 @@
     canvas.innerHTML = window.LanyardRender.renderLanyard(s);
     canvas.firstElementChild.style.transform = `scale(${ui.zoom})${ui.side === "back" ? " scaleX(-1)" : ""}`;
     $("#zoom-level").textContent = Math.round(ui.zoom * 100) + "%";
-    $("#preview-caption").textContent = `${s.material.short} · ${s.width.label} × ${s.length.label} · ${ui.side === "back" ? "Back" : "Front"}`;
+    $("#preview-caption").textContent = `${s.material.short} · ${s.width.label} × ${s.length.label} · ${colourName(s.strapColour)} · ${ui.side === "back" ? "Back" : "Front"}`;
     $("#progress-step").textContent = `Step 1 of ${CFG.steps.length}`;
     $("#progress-name").textContent = CFG.steps[0];
     $("#progress-fill").style.width = `${100 / CFG.steps.length}%`;
