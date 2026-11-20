@@ -15,7 +15,7 @@ npx serve .
 - [x] Step 1, Material (silkscreen, woven, dye-sub satin) with real fabric textures
 - [x] Step 2, Width & length (3/8" to 1"; 32", 36", 40"): styled like the design: width cards and a length segmented control; the preview strap gets wider and hangs lower
 - [x] Step 3, Colour & design: 17 colours + custom, second colour, 9 designs on dye-sub incl. your own image, styled like the design (design tiles, round swatches, upload drop zone); the preview draws them
-- [x] Step 4, Imprint: one/both/different sides, text (font, bold), logo upload (tint, background removal, logo colours), colour, size, spacing, layout. Plain HTML for now; drawn on the preview
+- [ ] Imprint (text + logo): HTML form only for now, not wired to the preview
 - [ ] Hardware: breakaway, end finish, buckle, attachment, add-ons
 - [ ] Worn view
 - [ ] Quote form, share link, PDF proof
