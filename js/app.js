@@ -60,18 +60,62 @@
         onclick: () => onpick(id),
       }, text)));
 
-  // Plain colour picker: one radio per palette colour plus a custom colour input.
-  function colourPicker(name, legend, current, onpick) {
+  // Colour swatches: one round button per palette colour plus a custom colour.
+  function swatches(current, label, onpick) {
     const isCustom = !CFG.colours.some((c) => c.hex.toLowerCase() === current.toLowerCase());
-    return h("fieldset", {}, h("legend", {}, legend),
-      CFG.colours.map((c) => h("label", {},
-        h("input", { type: "radio", name, value: c.hex, checked: c.hex.toLowerCase() === current.toLowerCase(), onchange: () => onpick(c.hex) }),
-        " " + c.name, h("br"))),
-      h("label", {},
-        h("input", { type: "radio", name, value: "custom", checked: isCustom, onchange: (e) => e.target.parentNode.querySelector("input[type=color]").click() }),
-        " Custom: ",
+    return h("div", { class: "swatches", role: "radiogroup", "aria-label": label },
+      CFG.colours.map((c) => {
+        const sel = c.hex.toLowerCase() === current.toLowerCase();
+        return h("button", {
+          type: "button",
+          role: "radio",
+          class: "swatch" + (sel ? " is-selected" : ""),
+          "aria-checked": String(sel),
+          title: c.name,
+          "aria-label": c.name,
+          style: `--c:${c.hex}`,
+          onclick: () => onpick(c.hex),
+        });
+      }),
+      h("label", { class: "swatch swatch-custom" + (isCustom ? " is-selected" : ""), title: "Custom colour", style: isCustom ? `--c:${current}` : null },
         // change (not input) so the native picker isn't torn down by a re-render while it's open
-        h("input", { type: "color", value: current, "aria-label": legend + ", custom", onchange: (e) => onpick(e.target.value) })));
+        h("input", { type: "color", value: current, "aria-label": label + ", custom colour", onchange: (e) => onpick(e.target.value) }),
+        h("span", { "aria-hidden": "true" }, "+")));
+  }
+
+  // Small strip showing what each design looks like in the current colours.
+  function designSwatch(style) {
+    const a = state.strapColour, b = state.colour2;
+    const bg = {
+      solid: a,
+      gradient: `linear-gradient(90deg,${a},${b})`,
+      "stripe-centre": `linear-gradient(${a} 36%,${b} 36% 64%,${a} 64%)`,
+      "stripe-edges": `linear-gradient(${a} 6%,${b} 6% 22%,${a} 22% 78%,${b} 78% 94%,${a} 94%)`,
+      dots: `radial-gradient(${b} 22%,transparent 24%) 0 0/9px 9px,${a}`,
+      chevron: `repeating-linear-gradient(60deg,${a} 0 4px,${b} 4px 7px)`,
+      diagonal: `repeating-linear-gradient(45deg,${a} 0 5px,${b} 5px 10px)`,
+      checks: `conic-gradient(${b} 25%,${a} 0 50%,${b} 0 75%,${a} 0) 0 0/12px 12px`,
+      photo: state.photo ? `url(${state.photo}) center/cover` : "linear-gradient(135deg,#94a3b8,#cbd5e1)",
+    }[style];
+    return h("span", { class: "design-swatch", style: `background:${bg}` });
+  }
+
+  // Drop zone for the background image: click to browse or drag a file onto it.
+  function photoUpload() {
+    const input = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", class: "visually-hidden", id: "photo-input",
+      onchange: (e) => { loadPhoto(e.target.files[0]); e.target.value = ""; } });
+    const drop = h("label", {
+      class: "dropzone" + (state.photo ? " has-file" : ""),
+      for: "photo-input",
+      ondragover: (e) => { e.preventDefault(); drop.classList.add("is-over"); },
+      ondragleave: () => drop.classList.remove("is-over"),
+      ondrop: (e) => { e.preventDefault(); drop.classList.remove("is-over"); loadPhoto(e.dataTransfer.files[0]); },
+    },
+      state.photo
+        ? [h("img", { src: state.photo, alt: "" }), h("span", {}, state.photoName || "Uploaded", h("br"), h("small", {}, "Click or drop to replace"))]
+        : [h("strong", {}, "Upload a background image"), h("small", {}, "A wide photo or pattern works best. It repeats along the strap.")]);
+    return h("div", { class: "stack-sm" }, input, drop,
+      state.photo ? h("button", { type: "button", class: "link", onclick: () => set({ photo: null, photoName: "" }) }, "Remove") : null);
   }
 
   // Background image for the "Your image" design: downscaled so the preview stays light.
@@ -140,19 +184,21 @@
         const style = resolved().design.style;
         const designs = resolved().material.designs;
         const twoColour = !["solid", "photo"].includes(style);
-        return h("div", {},
-          designs ? h("fieldset", {}, h("legend", {}, "Design"), CFG.designStyles.map((d) => h("label", {},
-            h("input", { type: "radio", name: "design", value: d.id, checked: d.id === style, onchange: () => set({ designStyle: d.id }) }),
-            " " + d.name, h("br")))) : null,
-          colourPicker("strap-colour", twoColour ? "Main colour" : "Strap colour", state.strapColour, (hex) => set({ strapColour: hex })),
-          twoColour ? colourPicker("colour2", "Second colour", state.colour2, (hex) => set({ colour2: hex })) : null,
-          style === "photo" ? h("fieldset", {}, h("legend", {}, "Background image"),
-            h("p", {}, "A wide photo or pattern works best. It repeats along the strap."),
-            h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", onchange: (e) => loadPhoto(e.target.files[0]) }),
-            state.photo ? h("p", {}, "Uploaded: " + state.photoName + " ",
-              h("button", { type: "button", onclick: () => set({ photo: null, photoName: "" }) }, "Remove")) : null) : null,
-          designs ? null : h("p", {}, "Want stripes, gradients or a photo? Choose Digital Sublimation for full-colour designs."),
-          h("p", {}, "Screen colours are approximate. We match to Pantone (PMS) on your proof."));
+        const field = (label, ...children) => h("div", { class: "field" }, h("span", {}, label), ...children);
+        return h("div", { class: "stack" },
+          designs ? field("Design", h("div", { class: "designs", role: "radiogroup", "aria-label": "Design" }, CFG.designStyles.map((d) =>
+            h("button", {
+              type: "button",
+              role: "radio",
+              class: "design" + (d.id === style ? " is-selected" : ""),
+              "aria-checked": String(d.id === style),
+              onclick: () => set({ designStyle: d.id }),
+            }, h("span", { class: "design-chip" }, designSwatch(d.id)), h("span", {}, d.name))))) : null,
+          field(twoColour ? "Main colour" : "Strap colour", swatches(state.strapColour, "Strap colour", (hex) => set({ strapColour: hex }))),
+          twoColour ? field("Second colour", swatches(state.colour2, "Second colour", (hex) => set({ colour2: hex }))) : null,
+          style === "photo" ? photoUpload() : null,
+          designs ? null : h("p", { class: "hint" }, "Want stripes, gradients or a photo? Choose Digital Sublimation for full-colour designs."),
+          h("p", { class: "hint" }, "Screen colours are approximate. We match to Pantone (PMS) on your proof."));
       },
     },
   ];
