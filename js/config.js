@@ -1,7 +1,7 @@
 /*
  * Catalogue for the lanyard configurator. Add options here; the UI reads from it.
- * Materials, widths, lengths, colours and designs are wired up so far.
- * Imprint and hardware come in later steps.
+ * Materials, widths, lengths, colours, designs and imprint are wired up so far.
+ * Hardware comes in later steps.
  */
 window.LANYARD_CONFIG = {
   steps: ["Material", "Width & length", "Colour & design", "Imprint", "Safety breakaway", "Fittings", "Detachable buckle", "Hook & attachment", "Badge holder & add-ons", "Quantity & quote"],
@@ -14,6 +14,8 @@ window.LANYARD_CONFIG = {
       blurb: "Ribbed flat polyester with screen-printed spot colours. Our most popular, budget-friendly option.",
       swatch: "assets/materials/silkscreen-on-flat.jpg",
       texture: "flat",
+      imprintNote: "Printed in solid spot colours (PMS matched).",
+      fullColourLogo: false,
     },
     {
       id: "woven-polyester",
@@ -22,6 +24,8 @@ window.LANYARD_CONFIG = {
       blurb: "Your design is woven into the fabric. Premium feel that never fades or peels.",
       swatch: "assets/materials/coarse-woven-on-polyester.jpg",
       texture: "woven",
+      imprintNote: "Woven thread colours. Best for bold text and simple logos.",
+      fullColourLogo: false,
     },
     {
       id: "dye-sub-satin",
@@ -31,6 +35,8 @@ window.LANYARD_CONFIG = {
       swatch: "assets/materials/digital-sublimation-on-thick-satin.jpg",
       texture: "satin",
       badge: "Full-colour designs",
+      imprintNote: "Full colour. Logos print exactly as uploaded.",
+      fullColourLogo: true,
       designs: true,
     },
   ],
@@ -81,6 +87,15 @@ window.LANYARD_CONFIG = {
     { id: "pink",    name: "Pink",        hex: "#e86fa5" },
     { id: "purple",  name: "Purple",      hex: "#5b2a86" },
     { id: "brown",   name: "Brown",       hex: "#5a3b26" },
+  ],
+
+  fonts: [
+    { id: "arial",     name: "Arial",     css: "Arial, Helvetica, sans-serif" },
+    { id: "impact",    name: "Impact",    css: "Impact, 'Arial Narrow Bold', sans-serif" },
+    { id: "verdana",   name: "Verdana",   css: "Verdana, Geneva, sans-serif" },
+    { id: "trebuchet", name: "Trebuchet", css: "'Trebuchet MS', sans-serif" },
+    { id: "georgia",   name: "Georgia",   css: "Georgia, 'Times New Roman', serif" },
+    { id: "courier",   name: "Courier",   css: "'Courier New', Courier, monospace" },
   ],
 
   defaults: {

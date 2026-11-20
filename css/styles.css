@@ -156,7 +156,10 @@ img { max-width: 100%; }
 .design.is-selected { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); transform: none; }
 .design-chip { display: block; width: 100%; }
 .design-swatch { display: block; height: 22px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
+.swatch-block { display: flex; flex-direction: column; gap: 10px; }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatches-logo { align-items: center; padding-bottom: 10px; border-bottom: 1px dashed var(--line-2); }
+.swatch-label { margin-right: 4px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
 .swatch {
   position: relative; display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%;
   background: var(--c); cursor: pointer; transition: transform .15s ease;

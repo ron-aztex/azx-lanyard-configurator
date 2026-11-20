@@ -7,6 +7,12 @@
   const $ = (sel) => document.querySelector(sel);
   const byId = (list, id) => list.find((x) => x.id === id) || list[0];
 
+  const newImprint = (o) => ({
+    mode: "text", text: "YOUR BRAND", font: "arial", bold: true, colour: "#f4f4f2",
+    logo: null, logoAspect: 1, logoName: "", logoTint: null, logoWarn: "", logoOpaque: false,
+    size: "m", spacing: "normal", layout: "repeat", ...o,
+  });
+
   const state = {
     material: CFG.defaults.material,
     width: CFG.defaults.width,
@@ -17,8 +23,12 @@
     photo: null,
     photoAspect: 1,
     photoName: "",
+    sides: "one",
+    front: newImprint(),
+    back: newImprint({ mode: "text", text: "www.yourbrand.com", bold: false }),
+    palette: [], // colours picked up from the uploaded logo
   };
-  const ui = { side: "front", zoom: 1 };
+  const ui = { side: "front", editSide: "front", zoom: 1 };
 
   function h(tag, attrs, ...children) {
     const el = document.createElement(tag);
@@ -41,8 +51,18 @@
       design: material.designs
         ? { style: state.designStyle, colour2: state.colour2, photo: state.photo, photoAspect: state.photoAspect }
         : { style: "solid", colour2: state.colour2 },
+      imprint: imprintFor(ui.side, material),
     };
   };
+
+  // The imprint shown on one side of the strap, with its font resolved and the
+  // logo tint defaulting to one colour unless the material prints full colour.
+  function imprintFor(side, material) {
+    if (side === "back" && state.sides === "one") return null;
+    const src = side === "back" && state.sides === "different" ? state.back : state.front;
+    if (src.mode === "none") return null;
+    return { ...src, font: byId(CFG.fonts, src.font), logoTint: src.logoTint == null ? !material.fullColourLogo : src.logoTint };
+  }
 
   const colourName = (hex) => {
     const c = CFG.colours.find((c) => c.hex.toLowerCase() === hex.toLowerCase());
@@ -63,24 +83,30 @@
   // Colour swatches: one round button per palette colour plus a custom colour.
   function swatches(current, label, onpick) {
     const isCustom = !CFG.colours.some((c) => c.hex.toLowerCase() === current.toLowerCase());
-    return h("div", { class: "swatches", role: "radiogroup", "aria-label": label },
-      CFG.colours.map((c) => {
-        const sel = c.hex.toLowerCase() === current.toLowerCase();
-        return h("button", {
-          type: "button",
-          role: "radio",
-          class: "swatch" + (sel ? " is-selected" : ""),
-          "aria-checked": String(sel),
-          title: c.name,
-          "aria-label": c.name,
-          style: `--c:${c.hex}`,
-          onclick: () => onpick(c.hex),
-        });
-      }),
+    const swatch = (hex, name) => {
+      const sel = hex.toLowerCase() === current.toLowerCase();
+      return h("button", {
+        type: "button",
+        role: "radio",
+        class: "swatch" + (sel ? " is-selected" : ""),
+        "aria-checked": String(sel),
+        title: name,
+        "aria-label": name,
+        style: `--c:${hex}`,
+        onclick: () => onpick(hex),
+      });
+    };
+    const row = h("div", { class: "swatches", role: "radiogroup", "aria-label": label },
+      CFG.colours.map((c) => swatch(c.hex, c.name)),
       h("label", { class: "swatch swatch-custom" + (isCustom ? " is-selected" : ""), title: "Custom colour", style: isCustom ? `--c:${current}` : null },
         // change (not input) so the native picker isn't torn down by a re-render while it's open
         h("input", { type: "color", value: current, "aria-label": label + ", custom colour", onchange: (e) => onpick(e.target.value) }),
         h("span", { "aria-hidden": "true" }, "+")));
+    if (!state.palette.length) return row;
+    return h("div", { class: "swatch-block" },
+      h("div", { class: "swatches swatches-logo" }, h("span", { class: "swatch-label" }, "From your logo"),
+        state.palette.map((hex) => swatch(hex, "Logo colour " + hex.toUpperCase()))),
+      row);
   }
 
   // Small strip showing what each design looks like in the current colours.
@@ -133,6 +159,216 @@
       set({ photo: c.toDataURL("image/jpeg", 0.88), photoAspect: c.width / c.height, photoName: file.name });
     };
     img.src = url;
+  }
+
+  // Plain radio list (imprint step; styled later).
+  const radios = (name, legend, options, current, onpick) =>
+    h("fieldset", {}, h("legend", {}, legend), options.map(([id, text]) =>
+      h("label", {},
+        h("input", { type: "radio", name, value: id, checked: id === current, onchange: () => onpick(id) }),
+        " " + text, h("br"))));
+
+  // Plain colour list: logo colours first, then the palette, then a custom colour.
+  function colourRadios(name, legend, current, onpick) {
+    const isCustom = ![...state.palette, ...CFG.colours.map((c) => c.hex)].some((hex) => hex.toLowerCase() === current.toLowerCase());
+    const options = [
+      ...state.palette.map((hex) => [hex, "From your logo " + hex.toUpperCase()]),
+      ...CFG.colours.map((c) => [c.hex, c.name]),
+    ];
+    return h("fieldset", {}, h("legend", {}, legend),
+      options.map(([hex, text]) => h("label", {},
+        h("input", { type: "radio", name, value: hex, checked: hex.toLowerCase() === current.toLowerCase(), onchange: () => onpick(hex) }),
+        " " + text, h("br"))),
+      h("label", {},
+        h("input", { type: "radio", name, value: "custom", checked: isCustom, onchange: (e) => e.target.parentNode.querySelector("input[type=color]").click() }),
+        " Custom: ",
+        h("input", { type: "color", value: current, "aria-label": legend + ", custom colour", onchange: (e) => onpick(e.target.value) })));
+  }
+
+  // ---------------------------------------------------------------- logo
+  function readImage(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) return reject(new Error("none"));
+      if (!/^image\//.test(file.type)) { alert("Please choose an image file (PNG, JPG, SVG or WebP)."); return reject(new Error("type")); }
+      if (file.size > 10 * 1024 * 1024) { alert("That file is over 10 MB. Please use a smaller version."); return reject(new Error("size")); }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => resolve({ url: reader.result, img, name: file.name, svg: file.type === "image/svg+xml" });
+        img.onerror = () => { alert("We couldn't read that image. Try a PNG or JPG."); reject(new Error("decode")); };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function downscale(img, maxSide) {
+    const w = img.naturalWidth || 300, h0 = img.naturalHeight || 300;
+    const k = Math.min(1, maxSide / Math.max(w, h0));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w * k));
+    c.height = Math.max(1, Math.round(h0 * k));
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  // Finds the logo's main colours and whether it sits on a solid background.
+  function analyseLogo(canvas) {
+    const { width: w, height: h0 } = canvas;
+    const data = canvas.getContext("2d").getImageData(0, 0, w, h0).data;
+    const at = (x, y) => { const i = (y * w + x) * 4; return [data[i], data[i + 1], data[i + 2], data[i + 3]]; };
+    const corners = [at(0, 0), at(w - 1, 0), at(0, h0 - 1), at(w - 1, h0 - 1)];
+    const dist = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+    const uniformBg = corners.every((c) => c[3] > 250) && corners.every((c) => dist(c, corners[0]) < 40);
+
+    // Bucket colours, skipping transparent pixels and the background colour.
+    const buckets = new Map();
+    const step = Math.max(1, Math.floor(Math.sqrt((w * h0) / 6000)));
+    for (let y = 0; y < h0; y += step) for (let x = 0; x < w; x += step) {
+      const p = at(x, y);
+      if (p[3] < 128 || (uniformBg && dist(p, corners[0]) < 60)) continue;
+      const key = (p[0] >> 4) + "," + (p[1] >> 4) + "," + (p[2] >> 4);
+      const b = buckets.get(key) || { n: 0, r: 0, g: 0, b: 0 };
+      b.n++; b.r += p[0]; b.g += p[1]; b.b += p[2];
+      buckets.set(key, b);
+    }
+    // Ignore rare colours (anti-aliased edges) and near-duplicates.
+    const total = [...buckets.values()].reduce((n, b) => n + b.n, 0);
+    const sorted = [...buckets.values()].filter((b) => b.n >= total * 0.03)
+      .sort((a, b) => b.n - a.n).map((b) => [b.r / b.n, b.g / b.n, b.b / b.n]);
+    const palette = [];
+    for (const c of sorted) if (palette.length < 6 && palette.every((p) => dist(p, c) > 70)) palette.push(c);
+    const hex = (c) => "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+    return { uniformBg, palette: palette.map(hex) };
+  }
+
+  // Makes a solid background transparent by flood-filling from the edges.
+  function removeBackground(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = downscale(img, 1200);
+        const ctx = c.getContext("2d");
+        const { width: w, height: h0 } = c;
+        const id = ctx.getImageData(0, 0, w, h0);
+        const d = id.data;
+        const bg = [d[0], d[1], d[2]];
+        const tol = 60;
+        const seen = new Uint8Array(w * h0);
+        const stack = [];
+        for (let x = 0; x < w; x++) stack.push(x, (h0 - 1) * w + x);
+        for (let y = 0; y < h0; y++) stack.push(y * w, y * w + w - 1);
+        while (stack.length) {
+          const p = stack.pop();
+          if (seen[p]) continue;
+          seen[p] = 1;
+          const i = p * 4;
+          const diff = Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]);
+          if (diff > tol) continue;
+          d[i + 3] = diff < tol / 2 ? 0 : Math.round((255 * (diff - tol / 2)) / (tol / 2)); // soft edge
+          const x = p % w;
+          if (x > 0) stack.push(p - 1);
+          if (x < w - 1) stack.push(p + 1);
+          if (p >= w) stack.push(p - w);
+          if (p < w * (h0 - 1)) stack.push(p + w);
+        }
+        ctx.putImageData(id, 0, 0);
+        resolve(c.toDataURL("image/png"));
+      };
+      img.src = url;
+    });
+  }
+
+  async function loadLogo(file, side) {
+    let r;
+    try { r = await readImage(file); } catch (_) { return; }
+    const nw = r.img.naturalWidth, nh = r.img.naturalHeight;
+    const c = downscale(r.img, 1200);
+    const info = analyseLogo(c);
+    const warn = !r.svg && Math.max(nw, nh) < 500
+      ? `This image is only ${nw}×${nh}px. It's fine for the preview, but please send a larger file or a vector (AI, EPS, PDF, SVG) for production.`
+      : "";
+    const imp = { ...state[side], logo: r.svg ? r.url : c.toDataURL("image/png"), logoAspect: (nw || 1) / (nh || 1), logoName: r.name, logoWarn: warn, logoOpaque: info.uniformBg };
+    if (imp.mode === "text" || imp.mode === "none") imp.mode = "both";
+    set({ [side]: imp, palette: info.palette });
+  }
+
+  function setSide(side) {
+    ui.side = side;
+    document.querySelectorAll("[data-side]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.side === side)));
+  }
+
+  function imprintStep() {
+    const m = resolved().material;
+    const side = state.sides === "different" ? ui.editSide : "front";
+    const imp = state[side];
+    // Typing only redraws the preview, so the text box keeps focus.
+    const setImp = (patch, light) => {
+      state[side] = { ...state[side], ...patch };
+      if (light) renderPreview(); else render();
+    };
+    const tint = imp.logoTint == null ? !m.fullColourLogo : imp.logoTint;
+    const wrap = h("div", {},
+      radios("sides", "Print on", [["one", "One side"], ["same", "Both sides, same"], ["different", "Front & back different"]], state.sides, (v) => {
+        if (v === "one") { ui.editSide = "front"; setSide("front"); }
+        set({ sides: v });
+      }));
+    if (state.sides === "different") {
+      wrap.append(radios("edit-side", "Editing", [["front", "Front"], ["back", "Back"]], ui.editSide, (v) => {
+        ui.editSide = v;
+        setSide(v);
+        render();
+      }));
+    }
+    wrap.append(radios("imp-mode", "Imprint", [["none", "Blank"], ["text", "Text"], ["logo", "Logo"], ["both", "Logo + text"]], imp.mode, (v) => setImp({ mode: v })));
+
+    if (imp.mode === "text" || imp.mode === "both") {
+      wrap.append(h("p", {},
+        h("label", {}, "Text ",
+          h("input", { type: "text", maxlength: "60", value: imp.text, placeholder: "Your company, event or slogan", name: "imp-text",
+            oninput: (e) => setImp({ text: e.target.value }, true) })), h("br"),
+        h("label", {}, "Font ",
+          h("select", { onchange: (e) => setImp({ font: e.target.value }) },
+            CFG.fonts.map((fo) => h("option", { value: fo.id, selected: fo.id === imp.font }, fo.name)))), " ",
+        h("label", {}, h("input", { type: "checkbox", checked: imp.bold, onchange: (e) => setImp({ bold: e.target.checked }) }), " Bold")));
+    }
+    if (imp.mode === "logo" || imp.mode === "both") {
+      wrap.append(h("p", {},
+        h("label", {}, "Upload your logo ",
+          h("input", { type: "file", accept: "image/png,image/jpeg,image/svg+xml,image/webp", onchange: (e) => { loadLogo(e.target.files[0], side); e.target.value = ""; } })),
+        h("br"), "PNG with a transparent background works best. SVG, JPG and WebP also accepted."));
+      if (side === "back" && !imp.logo && state.front.logo) {
+        wrap.append(h("p", {}, h("button", { type: "button", onclick: () => setImp({
+          logo: state.front.logo, logoAspect: state.front.logoAspect, logoName: state.front.logoName, logoWarn: state.front.logoWarn, logoOpaque: state.front.logoOpaque,
+        }) }, "Use the front logo")));
+      }
+      if (imp.logo) {
+        wrap.append(h("p", {}, "Uploaded: " + imp.logoName + " ",
+          h("button", { type: "button", onclick: () => setImp({ logo: null, logoName: "", logoWarn: "", logoOpaque: false }) }, "Remove")));
+        if (imp.logoWarn) wrap.append(h("p", {}, imp.logoWarn));
+        if (imp.logoOpaque) {
+          wrap.append(h("p", {}, "Your logo has a solid background, which will print as a box. ",
+            h("button", { type: "button", onclick: async (e) => {
+              e.target.disabled = true;
+              e.target.textContent = "Removing...";
+              setImp({ logo: await removeBackground(imp.logo), logoOpaque: false });
+            } }, "Remove background")));
+        }
+        wrap.append(radios("logo-tint", "Logo colours", [["one", "One colour"], ["full", "Full colour"]], tint ? "one" : "full", (v) => setImp({ logoTint: v === "one" })),
+          h("p", {}, tint
+            ? "Printed in your imprint colour, the way silkscreen and woven lanyards are usually made."
+            : m.fullColourLogo ? "Printed exactly as uploaded." : "Multi-colour logos cost more on silkscreen and may be simplified on woven. We'll confirm on your proof."));
+      }
+    }
+    if (imp.mode !== "none") {
+      if (imp.mode !== "logo" || tint) wrap.append(colourRadios("imp-colour", "Imprint colour", imp.colour, (hex) => setImp({ colour: hex })));
+      wrap.append(
+        radios("imp-size", "Size", [["s", "S"], ["m", "M"], ["l", "L"]], imp.size, (v) => setImp({ size: v })),
+        radios("imp-spacing", "Spacing", [["tight", "Tight"], ["normal", "Normal"], ["loose", "Loose"]], imp.spacing, (v) => setImp({ spacing: v })),
+        radios("imp-layout", "Layout", [["repeat", "Repeat"], ["single", "Once per side"]], imp.layout, (v) => setImp({ layout: v })),
+        h("p", {}, m.imprintNote));
+    }
+    return wrap;
   }
 
   const STEPS = [
@@ -201,6 +437,15 @@
           h("p", { class: "hint" }, "Screen colours are approximate. We match to Pantone (PMS) on your proof."));
       },
     },
+    {
+      id: "imprint",
+      title: "Imprint",
+      summary: () => {
+        const label = { none: "Blank", text: "Text", logo: "Logo", both: "Logo + text" }[state.front.mode];
+        return label + (state.sides === "one" ? "" : state.sides === "same" ? ", 2 sides" : ", front & back");
+      },
+      body: imprintStep,
+    },
   ];
 
   function set(patch) {
@@ -222,7 +467,8 @@
     const s = resolved();
     const canvas = $("#preview-canvas");
     canvas.innerHTML = window.LanyardRender.renderLanyard(s);
-    canvas.firstElementChild.style.transform = `scale(${ui.zoom})${ui.side === "back" ? " scaleX(-1)" : ""}`;
+    // The back is drawn as its own view (with the back imprint), not mirrored, so text reads correctly.
+    canvas.firstElementChild.style.transform = `scale(${ui.zoom})`;
     $("#zoom-level").textContent = Math.round(ui.zoom * 100) + "%";
     $("#preview-caption").textContent = `${s.material.short} · ${s.width.label} × ${s.length.label} · ${colourName(s.strapColour)} · ${ui.side === "back" ? "Back" : "Front"}`;
     $("#progress-step").textContent = `Step 1 of ${CFG.steps.length}`;
@@ -236,9 +482,9 @@
   }
 
   document.querySelectorAll("[data-side]").forEach((btn) => btn.addEventListener("click", () => {
-    ui.side = btn.dataset.side;
-    document.querySelectorAll("[data-side]").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
-    renderPreview();
+    setSide(btn.dataset.side);
+    // With different front and back, the Imprint step follows the side being viewed.
+    if (state.sides === "different") { ui.editSide = ui.side; render(); } else renderPreview();
   }));
 
   const zoomBy = (z) => { ui.zoom = Math.max(0.6, Math.min(2.5, z)); renderPreview(); };
