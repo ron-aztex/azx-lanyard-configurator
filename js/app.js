@@ -17,10 +17,10 @@
     photo: null,
     photoAspect: 1,
     photoName: "",
-    // Imprint: only "Print on" and the text are wired up so far.
+    // Imprint: "Print on", the imprint type, text and logo are wired up so far.
     sides: "one",
-    front: { text: "YOUR BRAND", font: "arial", bold: true },
-    back: { text: "www.yourbrand.com", font: "arial", bold: false },
+    front: { mode: "text", text: "YOUR BRAND", font: "arial", bold: true, logo: null, logoAspect: 1, logoName: "" },
+    back: { mode: "text", text: "www.yourbrand.com", font: "arial", bold: false, logo: null, logoAspect: 1, logoName: "" },
   };
   const ui = { side: "front", editSide: "front", zoom: 1 };
 
@@ -49,13 +49,13 @@
     };
   };
 
-  // The text printed on one side. Colour, size, spacing and layout use fixed
-  // defaults until those imprint fields are wired up.
+  // What's printed on one side. The logo prints as uploaded; colour, size,
+  // spacing and layout use fixed defaults until those fields are wired up.
   function imprintFor(side) {
     if (side === "back" && state.sides === "one") return null;
     const src = side === "back" && state.sides === "different" ? state.back : state.front;
-    if (!src.text.trim()) return null;
-    return { text: src.text.trim(), font: byId(CFG.fonts, src.font), bold: src.bold, colour: "#f4f4f2", size: "m", spacing: "normal" };
+    if (src.mode === "none") return null;
+    return { ...src, text: src.text.trim(), font: byId(CFG.fonts, src.font), colour: "#f4f4f2", size: "m", spacing: "normal" };
   }
 
   function setSide(side) {
@@ -154,7 +154,34 @@
     img.src = url;
   }
 
-  // Imprint step: "Print on" and Text work; the other fields are HTML only for now.
+  // Logo upload: keeps SVGs as they are and shrinks big images to 1200px.
+  function loadLogo(file, side) {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { alert("Please choose an image file (PNG, JPG, SVG or WebP)."); return; }
+    if (file.size > 10 * 1024 * 1024) { alert("That file is over 10 MB. Please use a smaller version."); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const nw = img.naturalWidth || 300, nh = img.naturalHeight || 300;
+        let logo = reader.result;
+        if (file.type !== "image/svg+xml") {
+          const k = Math.min(1, 1200 / Math.max(nw, nh));
+          const c = document.createElement("canvas");
+          c.width = Math.max(1, Math.round(nw * k));
+          c.height = Math.max(1, Math.round(nh * k));
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          logo = c.toDataURL("image/png");
+        }
+        set({ [side]: { ...state[side], logo, logoAspect: nw / nh, logoName: file.name } });
+      };
+      img.onerror = () => alert("We couldn't read that image. Try a PNG or JPG.");
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Imprint step: "Print on", Imprint, Text and Logo work; the other fields are HTML only for now.
   function imprintForm() {
     const radios = (name, legend, options, checked, onpick) =>
       h("fieldset", {}, h("legend", {}, legend), options.map(([id, text]) =>
@@ -176,18 +203,25 @@
       state.sides === "different"
         ? radios("imp-edit-side", "Editing", [["front", "Front"], ["back", "Back"]], ui.editSide, (v) => { ui.editSide = v; setSide(v); render(); })
         : null,
-      radios("imp-mode", "Imprint", [["none", "Blank"], ["text", "Text"], ["logo", "Logo"], ["both", "Logo + text"]], "text"),
-      h("fieldset", {}, h("legend", {}, state.sides === "different" ? `Text (${side})` : "Text"),
+      radios("imp-mode", state.sides === "different" ? `Imprint (${side})` : "Imprint",
+        [["none", "Blank"], ["text", "Text"], ["logo", "Logo"], ["both", "Logo + text"]], imp.mode, (v) => setImp({ mode: v })),
+      imp.mode === "text" || imp.mode === "both" ? h("fieldset", {}, h("legend", {}, state.sides === "different" ? `Text (${side})` : "Text"),
         h("label", {}, "Text ",
           h("input", { type: "text", maxlength: "60", value: imp.text, placeholder: "Your company, event or slogan",
             oninput: (e) => setImp({ text: e.target.value }, true) })), h("br"),
         h("label", {}, "Font ",
           h("select", { onchange: (e) => setImp({ font: e.target.value }) },
             CFG.fonts.map((fo) => h("option", { value: fo.id, selected: fo.id === imp.font }, fo.name)))), " ",
-        h("label", {}, h("input", { type: "checkbox", checked: imp.bold, onchange: (e) => setImp({ bold: e.target.checked }) }), " Bold")),
-      h("fieldset", {}, h("legend", {}, "Logo"),
-        h("label", {}, "Upload your logo ", h("input", { type: "file", accept: "image/png,image/jpeg,image/svg+xml,image/webp" })), h("br"),
-        "PNG with a transparent background works best. SVG, JPG and WebP also accepted."),
+        h("label", {}, h("input", { type: "checkbox", checked: imp.bold, onchange: (e) => setImp({ bold: e.target.checked }) }), " Bold")) : null,
+      imp.mode === "logo" || imp.mode === "both" ? h("fieldset", {}, h("legend", {}, state.sides === "different" ? `Logo (${side})` : "Logo"),
+        imp.logo
+          ? h("p", {}, "Uploaded: " + imp.logoName + " ",
+              h("button", { type: "button", onclick: () => setImp({ logo: null, logoAspect: 1, logoName: "" }) }, "Remove"))
+          : null,
+        h("label", {}, imp.logo ? "Replace logo " : "Upload your logo ",
+          h("input", { type: "file", accept: "image/png,image/jpeg,image/svg+xml,image/webp",
+            onchange: (e) => { loadLogo(e.target.files[0], side); e.target.value = ""; } })), h("br"),
+        "PNG with a transparent background works best. SVG, JPG and WebP also accepted.") : null,
       radios("imp-logo-colours", "Logo colours", [["one", "One colour"], ["full", "Full colour"]], "one"),
       radios("imp-colour", "Imprint colour", CFG.colours.map((c) => [c.id, c.name]), "white"),
       radios("imp-size", "Size", [["s", "S"], ["m", "M"], ["l", "L"]], "m"),
@@ -264,7 +298,8 @@
     {
       id: "imprint",
       title: "Imprint",
-      summary: () => ({ one: "One side", same: "2 sides, same", different: "Front & back" })[state.sides],
+      summary: () => ({ one: "One side", same: "2 sides, same", different: "Front & back" })[state.sides] +
+        (state.sides === "different" ? "" : " · " + ({ none: "Blank", text: "Text", logo: "Logo", both: "Logo + text" })[state.front.mode]),
       body: imprintForm,
     },
   ];

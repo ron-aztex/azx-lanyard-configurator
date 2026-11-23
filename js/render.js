@@ -1,8 +1,8 @@
 /*
  * Draws the lanyard preview as an SVG string.
  * First pass: a flat-lay strap loop with the material's fabric texture, the
- * chosen colours/design, the imprint text and a simple drawn hook. Logos,
- * hardware images and the worn view come later.
+ * chosen colours/design, the imprint (text and logo) and a simple drawn hook.
+ * Hardware images and the worn view come later.
  */
 (function () {
   const U = 40; // drawing units per inch
@@ -15,6 +15,7 @@
 
   // Imprint sizes are fractions of the strap width.
   const TEXT_SIZE = { s: 0.44, m: 0.56, l: 0.68 };
+  const LOGO_SIZE = { s: 0.6, m: 0.74, l: 0.88 };
   const GAP = { tight: 0.7, normal: 1.3, loose: 2.6 };
 
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -94,22 +95,55 @@
     return { defs, body };
   }
 
-  // Imprint text repeated along both legs, in each leg's frame so it reads
-  // along the strap. It stays clear of the hook end (w * 2.6) and the top curve (w * 0.85).
+  // ---------- imprint ----------
+  // The logo and/or text, each with its length along the strap.
+  function imprintItems(imp, w) {
+    const items = [];
+    const size = w * TEXT_SIZE[imp.size];
+    if ((imp.mode === "logo" || imp.mode === "both") && imp.logo) {
+      const lh = w * LOGO_SIZE[imp.size];
+      items.push({ kind: "logo", w: Math.min(lh * imp.logoAspect, w * 8), h: lh });
+    }
+    if ((imp.mode === "text" || imp.mode === "both") && imp.text) {
+      items.push({ kind: "text", w: textWidth(imp.text, imp.font.css, size, imp.bold) });
+    }
+    return { items, size };
+  }
+
+  // Repeats the items (logo, text, logo, text...) as many times as fit
+  // between a and b, centred in that run.
+  function layoutItems(items, gap, a, b) {
+    const run = [];
+    let used = 0;
+    for (let n = 0; n < 200; n++) {
+      const it = items[n % items.length];
+      const need = (run.length ? gap : 0) + it.w;
+      if (used + need > b - a) break;
+      used += need;
+      run.push(it);
+    }
+    let pos = a + (b - a - used) / 2;
+    return run.map((it, j) => {
+      if (j) pos += gap;
+      const centre = pos + it.w / 2;
+      pos += it.w;
+      return { item: it, centre };
+    });
+  }
+
+  // Imprint along both legs, in each leg's frame so it reads along the strap.
+  // It stays clear of the hook end (w * 2.6) and the top curve (w * 0.85).
   function strapImprint(imp, legs, w) {
     if (!imp) return "";
-    const size = w * TEXT_SIZE[imp.size];
-    const tw = textWidth(imp.text, imp.font.css, size, imp.bold);
+    const set = imprintItems(imp, w);
+    if (!set.items.length) return "";
     const gap = Math.max(w * GAP[imp.spacing], 8);
-    const text = (x) => `<text x="${x}" y="${size * 0.36}" text-anchor="middle" font-family="${esc(imp.font.css)}" font-size="${size}" font-weight="${imp.bold ? 700 : 400}" letter-spacing="${size * 0.04}" fill="${imp.colour}">${esc(imp.text)}</text>`;
+    const draw = ({ item, centre }) => item.kind === "logo"
+      ? `<image href="${imp.logo}" x="${centre - item.w / 2}" y="${-item.h / 2}" width="${item.w}" height="${item.h}" preserveAspectRatio="xMidYMid meet"/>`
+      : `<text x="${centre}" y="${set.size * 0.36}" text-anchor="middle" font-family="${esc(imp.font.css)}" font-size="${set.size}" font-weight="${imp.bold ? 700 : 400}" letter-spacing="${set.size * 0.04}" fill="${imp.colour}">${esc(imp.text)}</text>`;
     return legs.map((g) => {
       const [a, b] = g.fromJoin ? [w * 2.6, g.len - w * 0.85] : [w * 0.85, g.len - w * 2.6];
-      const n = Math.floor((b - a + gap) / (tw + gap));
-      if (n < 1) return "";
-      let pos = a + (b - a - (n * tw + (n - 1) * gap)) / 2 + tw / 2;
-      const items = [];
-      for (let i = 0; i < n; i++, pos += tw + gap) items.push(text(pos));
-      return `<g transform="translate(${g.x} ${g.y}) rotate(${g.deg})">${items.join("")}</g>`;
+      return `<g transform="translate(${g.x} ${g.y}) rotate(${g.deg})">${layoutItems(set.items, gap, a, b).map(draw).join("")}</g>`;
     }).join("");
   }
 
