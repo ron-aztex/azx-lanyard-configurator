@@ -83,14 +83,15 @@ window.LANYARD_CONFIG = {
     { id: "brown",   name: "Brown",       hex: "#5a3b26" },
   ],
 
-  // Imprint fonts. The Imprint step is HTML only for now (not wired to the preview).
+  // Imprint fonts. Only "Print on" and the Text fields of the Imprint step are
+  // wired up so far; the rest of that step is HTML only.
   fonts: [
-    { id: "arial",     name: "Arial" },
-    { id: "impact",    name: "Impact" },
-    { id: "verdana",   name: "Verdana" },
-    { id: "trebuchet", name: "Trebuchet" },
-    { id: "georgia",   name: "Georgia" },
-    { id: "courier",   name: "Courier" },
+    { id: "arial",     name: "Arial",     css: "Arial, Helvetica, sans-serif" },
+    { id: "impact",    name: "Impact",    css: "Impact, 'Arial Narrow Bold', sans-serif" },
+    { id: "verdana",   name: "Verdana",   css: "Verdana, Geneva, sans-serif" },
+    { id: "trebuchet", name: "Trebuchet", css: "'Trebuchet MS', sans-serif" },
+    { id: "georgia",   name: "Georgia",   css: "Georgia, 'Times New Roman', serif" },
+    { id: "courier",   name: "Courier",   css: "'Courier New', Courier, monospace" },
   ],
 
   defaults: {

@@ -1,8 +1,8 @@
 /*
  * Draws the lanyard preview as an SVG string.
  * First pass: a flat-lay strap loop with the material's fabric texture, the
- * chosen colours/design and a simple drawn hook. Hardware images, imprint and
- * the worn view come later.
+ * chosen colours/design, the imprint text and a simple drawn hook. Logos,
+ * hardware images and the worn view come later.
  */
 (function () {
   const U = 40; // drawing units per inch
@@ -12,6 +12,17 @@
     woven: { href: "assets/textures/woven.png",      w: 284, h: 145, opacity: 1 },
     satin: { href: "assets/textures/satin.png",      w: 66,  h: 142, opacity: 0.9 },
   };
+
+  // Imprint sizes are fractions of the strap width.
+  const TEXT_SIZE = { s: 0.44, m: 0.56, l: 0.68 };
+  const GAP = { tight: 0.7, normal: 1.3, loose: 2.6 };
+
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const measureCtx = document.createElement("canvas").getContext("2d");
+  function textWidth(text, fontCss, size, bold) {
+    measureCtx.font = `${bold ? "bold" : "normal"} ${size}px ${fontCss}`;
+    return measureCtx.measureText(text).width + text.length * size * 0.04;
+  }
 
   function shade(hex, amt) {
     const n = parseInt(hex.slice(1), 16);
@@ -83,6 +94,25 @@
     return { defs, body };
   }
 
+  // Imprint text repeated along both legs, in each leg's frame so it reads
+  // along the strap. It stays clear of the hook end (w * 2.6) and the top curve (w * 0.85).
+  function strapImprint(imp, legs, w) {
+    if (!imp) return "";
+    const size = w * TEXT_SIZE[imp.size];
+    const tw = textWidth(imp.text, imp.font.css, size, imp.bold);
+    const gap = Math.max(w * GAP[imp.spacing], 8);
+    const text = (x) => `<text x="${x}" y="${size * 0.36}" text-anchor="middle" font-family="${esc(imp.font.css)}" font-size="${size}" font-weight="${imp.bold ? 700 : 400}" letter-spacing="${size * 0.04}" fill="${imp.colour}">${esc(imp.text)}</text>`;
+    return legs.map((g) => {
+      const [a, b] = g.fromJoin ? [w * 2.6, g.len - w * 0.85] : [w * 0.85, g.len - w * 2.6];
+      const n = Math.floor((b - a + gap) / (tw + gap));
+      if (n < 1) return "";
+      let pos = a + (b - a - (n * tw + (n - 1) * gap)) / 2 + tw / 2;
+      const items = [];
+      for (let i = 0; i < n; i++, pos += tw + gap) items.push(text(pos));
+      return `<g transform="translate(${g.x} ${g.y}) rotate(${g.deg})">${items.join("")}</g>`;
+    }).join("");
+  }
+
   function renderLanyard(s) {
     const w = s.width.inches * U;
     const tex = TEXTURES[s.material.texture];
@@ -120,7 +150,7 @@
           </filter>
         </defs>
         <g filter="url(#drop)">
-          <g mask="url(#strap-shape)">${design.body}</g>
+          <g mask="url(#strap-shape)">${design.body}${strapImprint(s.imprint, legs, w)}</g>
           ${band("url(#tex)", `opacity="${tex.opacity}" style="mix-blend-mode:multiply"`)}
           ${band(shade(s.strapColour, 0.18), `stroke-width="${w * 0.12}" opacity=".25" transform="translate(${-w * 0.3} 0)"`)}
         </g>

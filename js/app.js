@@ -17,8 +17,12 @@
     photo: null,
     photoAspect: 1,
     photoName: "",
+    // Imprint: only "Print on" and the text are wired up so far.
+    sides: "one",
+    front: { text: "YOUR BRAND", font: "arial", bold: true },
+    back: { text: "www.yourbrand.com", font: "arial", bold: false },
   };
-  const ui = { side: "front", zoom: 1 };
+  const ui = { side: "front", editSide: "front", zoom: 1 };
 
   function h(tag, attrs, ...children) {
     const el = document.createElement(tag);
@@ -41,8 +45,23 @@
       design: material.designs
         ? { style: state.designStyle, colour2: state.colour2, photo: state.photo, photoAspect: state.photoAspect }
         : { style: "solid", colour2: state.colour2 },
+      imprint: imprintFor(ui.side),
     };
   };
+
+  // The text printed on one side. Colour, size, spacing and layout use fixed
+  // defaults until those imprint fields are wired up.
+  function imprintFor(side) {
+    if (side === "back" && state.sides === "one") return null;
+    const src = side === "back" && state.sides === "different" ? state.back : state.front;
+    if (!src.text.trim()) return null;
+    return { text: src.text.trim(), font: byId(CFG.fonts, src.font), bold: src.bold, colour: "#f4f4f2", size: "m", spacing: "normal" };
+  }
+
+  function setSide(side) {
+    ui.side = side;
+    document.querySelectorAll("[data-side]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.side === side)));
+  }
 
   const colourName = (hex) => {
     const c = CFG.colours.find((c) => c.hex.toLowerCase() === hex.toLowerCase());
@@ -135,18 +154,37 @@
     img.src = url;
   }
 
-  // Imprint step: HTML only for now. The fields aren't connected to anything yet.
+  // Imprint step: "Print on" and Text work; the other fields are HTML only for now.
   function imprintForm() {
-    const radios = (name, legend, options, checked) =>
+    const radios = (name, legend, options, checked, onpick) =>
       h("fieldset", {}, h("legend", {}, legend), options.map(([id, text]) =>
-        h("label", {}, h("input", { type: "radio", name, value: id, checked: id === checked }), " " + text, h("br"))));
+        h("label", {},
+          h("input", { type: "radio", name, value: id, checked: id === checked, onchange: onpick ? () => onpick(id) : null }),
+          " " + text, h("br"))));
+    const side = state.sides === "different" ? ui.editSide : "front";
+    const imp = state[side];
+    // Typing only redraws the preview, so the text box keeps focus.
+    const setImp = (patch, light) => {
+      state[side] = { ...state[side], ...patch };
+      if (light) renderPreview(); else render();
+    };
     return h("div", {},
-      radios("imp-sides", "Print on", [["one", "One side"], ["same", "Both sides, same"], ["different", "Front & back different"]], "one"),
+      radios("imp-sides", "Print on", [["one", "One side"], ["same", "Both sides, same"], ["different", "Front & back different"]], state.sides, (v) => {
+        if (v === "one") { ui.editSide = "front"; setSide("front"); }
+        set({ sides: v });
+      }),
+      state.sides === "different"
+        ? radios("imp-edit-side", "Editing", [["front", "Front"], ["back", "Back"]], ui.editSide, (v) => { ui.editSide = v; setSide(v); render(); })
+        : null,
       radios("imp-mode", "Imprint", [["none", "Blank"], ["text", "Text"], ["logo", "Logo"], ["both", "Logo + text"]], "text"),
-      h("fieldset", {}, h("legend", {}, "Text"),
-        h("label", {}, "Text ", h("input", { type: "text", maxlength: "60", value: "YOUR BRAND", placeholder: "Your company, event or slogan" })), h("br"),
-        h("label", {}, "Font ", h("select", {}, CFG.fonts.map((fo) => h("option", { value: fo.id }, fo.name)))), " ",
-        h("label", {}, h("input", { type: "checkbox", checked: true }), " Bold")),
+      h("fieldset", {}, h("legend", {}, state.sides === "different" ? `Text (${side})` : "Text"),
+        h("label", {}, "Text ",
+          h("input", { type: "text", maxlength: "60", value: imp.text, placeholder: "Your company, event or slogan",
+            oninput: (e) => setImp({ text: e.target.value }, true) })), h("br"),
+        h("label", {}, "Font ",
+          h("select", { onchange: (e) => setImp({ font: e.target.value }) },
+            CFG.fonts.map((fo) => h("option", { value: fo.id, selected: fo.id === imp.font }, fo.name)))), " ",
+        h("label", {}, h("input", { type: "checkbox", checked: imp.bold, onchange: (e) => setImp({ bold: e.target.checked }) }), " Bold")),
       h("fieldset", {}, h("legend", {}, "Logo"),
         h("label", {}, "Upload your logo ", h("input", { type: "file", accept: "image/png,image/jpeg,image/svg+xml,image/webp" })), h("br"),
         "PNG with a transparent background works best. SVG, JPG and WebP also accepted."),
@@ -226,7 +264,7 @@
     {
       id: "imprint",
       title: "Imprint",
-      summary: () => "",
+      summary: () => ({ one: "One side", same: "2 sides, same", different: "Front & back" })[state.sides],
       body: imprintForm,
     },
   ];
@@ -250,7 +288,8 @@
     const s = resolved();
     const canvas = $("#preview-canvas");
     canvas.innerHTML = window.LanyardRender.renderLanyard(s);
-    canvas.firstElementChild.style.transform = `scale(${ui.zoom})${ui.side === "back" ? " scaleX(-1)" : ""}`;
+    // The back is drawn as its own view (with the back text), not mirrored, so text reads correctly.
+    canvas.firstElementChild.style.transform = `scale(${ui.zoom})`;
     $("#zoom-level").textContent = Math.round(ui.zoom * 100) + "%";
     $("#preview-caption").textContent = `${s.material.short} · ${s.width.label} × ${s.length.label} · ${colourName(s.strapColour)} · ${ui.side === "back" ? "Back" : "Front"}`;
     $("#progress-step").textContent = `Step 1 of ${CFG.steps.length}`;
@@ -264,9 +303,9 @@
   }
 
   document.querySelectorAll("[data-side]").forEach((btn) => btn.addEventListener("click", () => {
-    ui.side = btn.dataset.side;
-    document.querySelectorAll("[data-side]").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
-    renderPreview();
+    setSide(btn.dataset.side);
+    // With different front and back text, the Imprint step edits the side being viewed.
+    if (state.sides === "different") { ui.editSide = ui.side; render(); } else renderPreview();
   }));
 
   const zoomBy = (z) => { ui.zoom = Math.max(0.6, Math.min(2.5, z)); renderPreview(); };
