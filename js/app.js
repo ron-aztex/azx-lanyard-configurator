@@ -19,8 +19,8 @@
     photoName: "",
     // Imprint: "Print on", the imprint type, text and logo are wired up so far.
     sides: "one",
-    front: { mode: "text", text: "YOUR BRAND", font: "arial", bold: true, logo: null, logoAspect: 1, logoName: "" },
-    back: { mode: "text", text: "www.yourbrand.com", font: "arial", bold: false, logo: null, logoAspect: 1, logoName: "" },
+    front: { mode: "text", text: "YOUR BRAND", font: "arial", bold: true, colour: "white", size: "m", logo: null, logoAspect: 1, logoName: "" },
+    back: { mode: "text", text: "www.yourbrand.com", font: "arial", bold: false, colour: "white", size: "m", logo: null, logoAspect: 1, logoName: "" },
   };
   const ui = { side: "front", editSide: "front", zoom: 1 };
 
@@ -49,13 +49,13 @@
     };
   };
 
-  // What's printed on one side. The logo prints as uploaded; colour, size,
-  // spacing and layout use fixed defaults until those fields are wired up.
+  // What's printed on one side. The logo prints as uploaded (the imprint colour
+  // is used for the text); spacing and layout use fixed defaults for now.
   function imprintFor(side) {
     if (side === "back" && state.sides === "one") return null;
     const src = side === "back" && state.sides === "different" ? state.back : state.front;
     if (src.mode === "none") return null;
-    return { ...src, text: src.text.trim(), font: byId(CFG.fonts, src.font), colour: "#f4f4f2", size: "m", spacing: "normal" };
+    return { ...src, text: src.text.trim(), font: byId(CFG.fonts, src.font), colour: byId(CFG.colours, src.colour).hex, spacing: "normal" };
   }
 
   function setSide(side) {
@@ -181,7 +181,8 @@
     reader.readAsDataURL(file);
   }
 
-  // Imprint step: "Print on", Imprint, Text and Logo work; the other fields are HTML only for now.
+  // Imprint step: "Print on", Imprint, Text (font, bold), Logo, Imprint colour and Size work;
+  // Logo colours, Spacing and Layout are HTML only for now.
   function imprintForm() {
     const radios = (name, legend, options, checked, onpick) =>
       h("fieldset", {}, h("legend", {}, legend), options.map(([id, text]) =>
@@ -223,8 +224,8 @@
             onchange: (e) => { loadLogo(e.target.files[0], side); e.target.value = ""; } })), h("br"),
         "PNG with a transparent background works best. SVG, JPG and WebP also accepted.") : null,
       radios("imp-logo-colours", "Logo colours", [["one", "One colour"], ["full", "Full colour"]], "one"),
-      radios("imp-colour", "Imprint colour", CFG.colours.map((c) => [c.id, c.name]), "white"),
-      radios("imp-size", "Size", [["s", "S"], ["m", "M"], ["l", "L"]], "m"),
+      imp.mode === "none" ? null : radios("imp-colour", "Imprint colour", CFG.colours.map((c) => [c.id, c.name]), imp.colour, (v) => setImp({ colour: v })),
+      imp.mode === "none" ? null : radios("imp-size", "Size", [["s", "S"], ["m", "M"], ["l", "L"]], imp.size, (v) => setImp({ size: v })),
       radios("imp-spacing", "Spacing", [["tight", "Tight"], ["normal", "Normal"], ["loose", "Loose"]], "normal"),
       radios("imp-layout", "Layout", [["repeat", "Repeat"], ["single", "Once per side"]], "repeat"));
   }
