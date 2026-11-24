@@ -19,8 +19,8 @@
     photoName: "",
     // Imprint: "Print on", the imprint type, text and logo are wired up so far.
     sides: "one",
-    front: { mode: "text", text: "YOUR BRAND", font: "arial", bold: true, colour: "white", size: "m", logo: null, logoAspect: 1, logoName: "" },
-    back: { mode: "text", text: "www.yourbrand.com", font: "arial", bold: false, colour: "white", size: "m", logo: null, logoAspect: 1, logoName: "" },
+    front: { mode: "text", text: "YOUR BRAND", font: "arial", bold: true, colour: "white", size: "m", spacing: "normal", layout: "repeat", logo: null, logoAspect: 1, logoName: "" },
+    back: { mode: "text", text: "www.yourbrand.com", font: "arial", bold: false, colour: "white", size: "m", spacing: "normal", layout: "repeat", logo: null, logoAspect: 1, logoName: "" },
   };
   const ui = { side: "front", editSide: "front", zoom: 1 };
 
@@ -50,12 +50,12 @@
   };
 
   // What's printed on one side. The logo prints as uploaded (the imprint colour
-  // is used for the text); spacing and layout use fixed defaults for now.
+  // is used for the text).
   function imprintFor(side) {
     if (side === "back" && state.sides === "one") return null;
     const src = side === "back" && state.sides === "different" ? state.back : state.front;
     if (src.mode === "none") return null;
-    return { ...src, text: src.text.trim(), font: byId(CFG.fonts, src.font), colour: byId(CFG.colours, src.colour).hex, spacing: "normal" };
+    return { ...src, text: src.text.trim(), font: byId(CFG.fonts, src.font), colour: byId(CFG.colours, src.colour).hex };
   }
 
   function setSide(side) {
@@ -181,8 +181,7 @@
     reader.readAsDataURL(file);
   }
 
-  // Imprint step: "Print on", Imprint, Text (font, bold), Logo, Imprint colour and Size work;
-  // Logo colours, Spacing and Layout are HTML only for now.
+  // Imprint step: everything works except Logo colours, which is HTML only for now.
   function imprintForm() {
     const radios = (name, legend, options, checked, onpick) =>
       h("fieldset", {}, h("legend", {}, legend), options.map(([id, text]) =>
@@ -226,8 +225,11 @@
       radios("imp-logo-colours", "Logo colours", [["one", "One colour"], ["full", "Full colour"]], "one"),
       imp.mode === "none" ? null : radios("imp-colour", "Imprint colour", CFG.colours.map((c) => [c.id, c.name]), imp.colour, (v) => setImp({ colour: v })),
       imp.mode === "none" ? null : radios("imp-size", "Size", [["s", "S"], ["m", "M"], ["l", "L"]], imp.size, (v) => setImp({ size: v })),
-      radios("imp-spacing", "Spacing", [["tight", "Tight"], ["normal", "Normal"], ["loose", "Loose"]], "normal"),
-      radios("imp-layout", "Layout", [["repeat", "Repeat"], ["single", "Once per side"]], "repeat"));
+      // Spacing is the gap between repeats, or between logo and text when printed once.
+      imp.mode === "none" || (imp.layout === "single" && imp.mode !== "both") ? null
+        : radios("imp-spacing", "Spacing", [["tight", "Tight"], ["normal", "Normal"], ["loose", "Loose"]], imp.spacing, (v) => setImp({ spacing: v })),
+      imp.mode === "none" ? null
+        : radios("imp-layout", "Layout", [["repeat", "Repeat"], ["single", "Once per side"]], imp.layout, (v) => setImp({ layout: v })));
   }
 
   const STEPS = [

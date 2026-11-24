@@ -111,11 +111,11 @@
   }
 
   // Repeats the items (logo, text, logo, text...) as many times as fit
-  // between a and b, centred in that run.
-  function layoutItems(items, gap, a, b) {
+  // between a and b, or places one set for "once per side"; centred in that run.
+  function layoutItems(items, gap, a, b, single) {
     const run = [];
     let used = 0;
-    for (let n = 0; n < 200; n++) {
+    for (let n = 0; n < (single ? items.length : 200); n++) {
       const it = items[n % items.length];
       const need = (run.length ? gap : 0) + it.w;
       if (used + need > b - a) break;
@@ -143,7 +143,7 @@
       : `<text x="${centre}" y="${set.size * 0.36}" text-anchor="middle" font-family="${esc(imp.font.css)}" font-size="${set.size}" font-weight="${imp.bold ? 700 : 400}" letter-spacing="${set.size * 0.04}" fill="${imp.colour}">${esc(imp.text)}</text>`;
     return legs.map((g) => {
       const [a, b] = g.fromJoin ? [w * 2.6, g.len - w * 0.85] : [w * 0.85, g.len - w * 2.6];
-      return `<g transform="translate(${g.x} ${g.y}) rotate(${g.deg})">${layoutItems(set.items, gap, a, b).map(draw).join("")}</g>`;
+      return `<g transform="translate(${g.x} ${g.y}) rotate(${g.deg})">${layoutItems(set.items, gap, a, b, imp.layout === "single").map(draw).join("")}</g>`;
     }).join("");
   }
 
