@@ -139,9 +139,13 @@
     if (!set.items.length) return "";
     const gap = Math.max(w * GAP[imp.spacing], 8);
     const draw = ({ item, centre }) => item.kind === "logo"
-      ? `<image href="${imp.logo}" x="${centre - item.w / 2}" y="${-item.h / 2}" width="${item.w}" height="${item.h}" preserveAspectRatio="xMidYMid meet"/>`
+      ? `<image href="${imp.logo}" x="${centre - item.w / 2}" y="${-item.h / 2}" width="${item.w}" height="${item.h}" preserveAspectRatio="xMidYMid meet"${imp.logoTint ? ' filter="url(#logo-tint)"' : ""}/>`
       : `<text x="${centre}" y="${set.size * 0.36}" text-anchor="middle" font-family="${esc(imp.font.css)}" font-size="${set.size}" font-weight="${imp.bold ? 700 : 400}" letter-spacing="${set.size * 0.04}" fill="${imp.colour}">${esc(imp.text)}</text>`;
-    return legs.map((g) => {
+    // "One colour" logos: every visible pixel filled with the imprint colour.
+    const tint = imp.logo && imp.logoTint
+      ? `<filter id="logo-tint" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feFlood flood-color="${imp.colour}"/><feComposite in2="SourceAlpha" operator="in"/></filter>`
+      : "";
+    return tint + legs.map((g) => {
       const [a, b] = g.fromJoin ? [w * 2.6, g.len - w * 0.85] : [w * 0.85, g.len - w * 2.6];
       return `<g transform="translate(${g.x} ${g.y}) rotate(${g.deg})">${layoutItems(set.items, gap, a, b, imp.layout === "single").map(draw).join("")}</g>`;
     }).join("");

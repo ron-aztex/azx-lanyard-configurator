@@ -19,8 +19,8 @@
     photoName: "",
     // Imprint: "Print on", the imprint type, text and logo are wired up so far.
     sides: "one",
-    front: { mode: "text", text: "YOUR BRAND", font: "arial", bold: true, colour: "white", size: "m", spacing: "normal", layout: "repeat", logo: null, logoAspect: 1, logoName: "" },
-    back: { mode: "text", text: "www.yourbrand.com", font: "arial", bold: false, colour: "white", size: "m", spacing: "normal", layout: "repeat", logo: null, logoAspect: 1, logoName: "" },
+    front: { mode: "text", text: "YOUR BRAND", font: "arial", bold: true, colour: "#f4f4f2", size: "m", spacing: "normal", layout: "repeat", logo: null, logoAspect: 1, logoName: "", logoTint: null },
+    back: { mode: "text", text: "www.yourbrand.com", font: "arial", bold: false, colour: "#f4f4f2", size: "m", spacing: "normal", layout: "repeat", logo: null, logoAspect: 1, logoName: "", logoTint: null },
   };
   const ui = { side: "front", editSide: "front", zoom: 1 };
 
@@ -49,13 +49,16 @@
     };
   };
 
-  // What's printed on one side. The logo prints as uploaded (the imprint colour
-  // is used for the text).
+  // Logo colours: "One colour" prints the logo in the imprint colour. Until the
+  // customer picks, it follows the material (dye-sub prints full colour).
+  const logoTint = (imp) => (imp.logoTint == null ? !byId(CFG.materials, state.material).fullColourLogo : imp.logoTint);
+
+  // What's printed on one side.
   function imprintFor(side) {
     if (side === "back" && state.sides === "one") return null;
     const src = side === "back" && state.sides === "different" ? state.back : state.front;
     if (src.mode === "none") return null;
-    return { ...src, text: src.text.trim(), font: byId(CFG.fonts, src.font), colour: byId(CFG.colours, src.colour).hex };
+    return { ...src, text: src.text.trim(), font: byId(CFG.fonts, src.font), logoTint: logoTint(src) };
   }
 
   function setSide(side) {
@@ -119,23 +122,29 @@
     return h("span", { class: "design-swatch", style: `background:${bg}` });
   }
 
-  // Drop zone for the background image: click to browse or drag a file onto it.
-  function photoUpload() {
-    const input = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", class: "visually-hidden", id: "photo-input",
-      onchange: (e) => { loadPhoto(e.target.files[0]); e.target.value = ""; } });
+  // Drop zone: click to browse or drag a file onto it. Shows the file once uploaded.
+  function upload({ id, label, hint, current, currentName, accept, onFile, onRemove }) {
+    const input = h("input", { type: "file", accept, class: "visually-hidden", id,
+      onchange: (e) => { onFile(e.target.files[0]); e.target.value = ""; } });
     const drop = h("label", {
-      class: "dropzone" + (state.photo ? " has-file" : ""),
-      for: "photo-input",
+      class: "dropzone" + (current ? " has-file" : ""),
+      for: id,
       ondragover: (e) => { e.preventDefault(); drop.classList.add("is-over"); },
       ondragleave: () => drop.classList.remove("is-over"),
-      ondrop: (e) => { e.preventDefault(); drop.classList.remove("is-over"); loadPhoto(e.dataTransfer.files[0]); },
+      ondrop: (e) => { e.preventDefault(); drop.classList.remove("is-over"); onFile(e.dataTransfer.files[0]); },
     },
-      state.photo
-        ? [h("img", { src: state.photo, alt: "" }), h("span", {}, state.photoName || "Uploaded", h("br"), h("small", {}, "Click or drop to replace"))]
-        : [h("strong", {}, "Upload a background image"), h("small", {}, "A wide photo or pattern works best. It repeats along the strap.")]);
+      current
+        ? [h("img", { src: current, alt: "" }), h("span", {}, currentName || "Uploaded", h("br"), h("small", {}, "Click or drop to replace"))]
+        : [h("strong", {}, label), h("small", {}, hint)]);
     return h("div", { class: "stack-sm" }, input, drop,
-      state.photo ? h("button", { type: "button", class: "link", onclick: () => set({ photo: null, photoName: "" }) }, "Remove") : null);
+      current ? h("button", { type: "button", class: "link", onclick: onRemove }, "Remove") : null);
   }
+
+  const photoUpload = () => upload({
+    id: "photo-input", accept: "image/png,image/jpeg,image/webp",
+    label: "Upload a background image", hint: "A wide photo or pattern works best. It repeats along the strap.",
+    current: state.photo, currentName: state.photoName, onFile: loadPhoto, onRemove: () => set({ photo: null, photoName: "" }),
+  });
 
   // Background image for the "Your image" design: downscaled so the preview stays light.
   function loadPhoto(file) {
@@ -181,13 +190,9 @@
     reader.readAsDataURL(file);
   }
 
-  // Imprint step: everything works except Logo colours, which is HTML only for now.
+  // Imprint step: what's printed, per side when front and back differ.
   function imprintForm() {
-    const radios = (name, legend, options, checked, onpick) =>
-      h("fieldset", {}, h("legend", {}, legend), options.map(([id, text]) =>
-        h("label", {},
-          h("input", { type: "radio", name, value: id, checked: id === checked, onchange: onpick ? () => onpick(id) : null }),
-          " " + text, h("br"))));
+    const m = resolved().material;
     const side = state.sides === "different" ? ui.editSide : "front";
     const imp = state[side];
     // Typing only redraws the preview, so the text box keeps focus.
@@ -195,41 +200,49 @@
       state[side] = { ...state[side], ...patch };
       if (light) renderPreview(); else render();
     };
-    return h("div", {},
-      radios("imp-sides", "Print on", [["one", "One side"], ["same", "Both sides, same"], ["different", "Front & back different"]], state.sides, (v) => {
+    const field = (label, ...body) => h("div", { class: "field" }, h("span", {}, label), ...body);
+    const small = (...args) => { const el = seg(...args); el.classList.add("segmented-sm"); return el; };
+    const tint = logoTint(imp);
+    const hasText = imp.mode === "text" || imp.mode === "both";
+    const hasLogo = imp.mode === "logo" || imp.mode === "both";
+
+    return h("div", { class: "stack" },
+      field("Print on", seg([["one", "One side"], ["same", "Both sides, same"], ["different", "Front & back different"]], state.sides, "Print on", (v) => {
         if (v === "one") { ui.editSide = "front"; setSide("front"); }
         set({ sides: v });
-      }),
+      })),
       state.sides === "different"
-        ? radios("imp-edit-side", "Editing", [["front", "Front"], ["back", "Back"]], ui.editSide, (v) => { ui.editSide = v; setSide(v); render(); })
+        ? h("div", { class: "side-tabs" }, seg([["front", "Edit front"], ["back", "Edit back"]], ui.editSide, "Side", (v) => { ui.editSide = v; setSide(v); render(); }))
         : null,
-      radios("imp-mode", state.sides === "different" ? `Imprint (${side})` : "Imprint",
-        [["none", "Blank"], ["text", "Text"], ["logo", "Logo"], ["both", "Logo + text"]], imp.mode, (v) => setImp({ mode: v })),
-      imp.mode === "text" || imp.mode === "both" ? h("fieldset", {}, h("legend", {}, state.sides === "different" ? `Text (${side})` : "Text"),
-        h("label", {}, "Text ",
-          h("input", { type: "text", maxlength: "60", value: imp.text, placeholder: "Your company, event or slogan",
-            oninput: (e) => setImp({ text: e.target.value }, true) })), h("br"),
-        h("label", {}, "Font ",
+      seg([["none", "Blank"], ["text", "Text"], ["logo", "Logo"], ["both", "Logo + text"]], imp.mode, "Imprint type", (v) => setImp({ mode: v })),
+      hasText ? h("label", { class: "field" }, h("span", {}, "Text"),
+        h("input", { type: "text", maxlength: "60", value: imp.text, placeholder: "Your company, event or slogan",
+          oninput: (e) => setImp({ text: e.target.value }, true) })) : null,
+      hasText ? h("div", { class: "row" },
+        h("label", { class: "field" }, h("span", {}, "Font"),
           h("select", { onchange: (e) => setImp({ font: e.target.value }) },
-            CFG.fonts.map((fo) => h("option", { value: fo.id, selected: fo.id === imp.font }, fo.name)))), " ",
-        h("label", {}, h("input", { type: "checkbox", checked: imp.bold, onchange: (e) => setImp({ bold: e.target.checked }) }), " Bold")) : null,
-      imp.mode === "logo" || imp.mode === "both" ? h("fieldset", {}, h("legend", {}, state.sides === "different" ? `Logo (${side})` : "Logo"),
-        imp.logo
-          ? h("p", {}, "Uploaded: " + imp.logoName + " ",
-              h("button", { type: "button", onclick: () => setImp({ logo: null, logoAspect: 1, logoName: "" }) }, "Remove"))
-          : null,
-        h("label", {}, imp.logo ? "Replace logo " : "Upload your logo ",
-          h("input", { type: "file", accept: "image/png,image/jpeg,image/svg+xml,image/webp",
-            onchange: (e) => { loadLogo(e.target.files[0], side); e.target.value = ""; } })), h("br"),
-        "PNG with a transparent background works best. SVG, JPG and WebP also accepted.") : null,
-      radios("imp-logo-colours", "Logo colours", [["one", "One colour"], ["full", "Full colour"]], "one"),
-      imp.mode === "none" ? null : radios("imp-colour", "Imprint colour", CFG.colours.map((c) => [c.id, c.name]), imp.colour, (v) => setImp({ colour: v })),
-      imp.mode === "none" ? null : radios("imp-size", "Size", [["s", "S"], ["m", "M"], ["l", "L"]], imp.size, (v) => setImp({ size: v })),
-      // Spacing is the gap between repeats, or between logo and text when printed once.
-      imp.mode === "none" || (imp.layout === "single" && imp.mode !== "both") ? null
-        : radios("imp-spacing", "Spacing", [["tight", "Tight"], ["normal", "Normal"], ["loose", "Loose"]], imp.spacing, (v) => setImp({ spacing: v })),
-      imp.mode === "none" ? null
-        : radios("imp-layout", "Layout", [["repeat", "Repeat"], ["single", "Once per side"]], imp.layout, (v) => setImp({ layout: v })));
+            CFG.fonts.map((fo) => h("option", { value: fo.id, selected: fo.id === imp.font, style: `font-family:${fo.css}` }, fo.name)))),
+        h("label", { class: "check" }, h("input", { type: "checkbox", checked: imp.bold, onchange: (e) => setImp({ bold: e.target.checked }) }), "Bold")) : null,
+      hasLogo ? upload({
+        id: "logo-input-" + side, accept: "image/png,image/jpeg,image/svg+xml,image/webp",
+        label: "Upload your logo", hint: "PNG with a transparent background works best. SVG, JPG and WebP also accepted.",
+        current: imp.logo, currentName: imp.logoName, onFile: (f) => loadLogo(f, side),
+        onRemove: () => setImp({ logo: null, logoAspect: 1, logoName: "" }),
+      }) : null,
+      hasLogo && imp.logo ? field("Logo colours",
+        seg([["one", "One colour"], ["full", "Full colour"]], tint ? "one" : "full", "Logo colours", (v) => setImp({ logoTint: v === "one" })),
+        h("small", { class: "hint" }, tint
+          ? "Printed in your imprint colour, the way silkscreen and woven lanyards are usually made."
+          : m.fullColourLogo ? "Printed exactly as uploaded." : "Multi-colour logos cost more on silkscreen and may be simplified on woven. We'll confirm on your proof.")) : null,
+      // The imprint colour isn't used when only a full-colour logo is printed.
+      imp.mode !== "none" && (hasText || tint) ? field("Imprint colour", swatches(imp.colour, "Imprint colour", (hex) => setImp({ colour: hex }))) : null,
+      imp.mode !== "none" ? h("div", { class: "row row-wrap" },
+        field("Size", small([["s", "S"], ["m", "M"], ["l", "L"]], imp.size, "Size", (v) => setImp({ size: v }))),
+        // Spacing is the gap between repeats, or between logo and text when printed once.
+        imp.layout === "single" && imp.mode !== "both" ? null
+          : field("Spacing", small([["tight", "Tight"], ["normal", "Normal"], ["loose", "Loose"]], imp.spacing, "Spacing", (v) => setImp({ spacing: v }))),
+        field("Layout", small([["repeat", "Repeat"], ["single", "Once per side"]], imp.layout, "Layout", (v) => setImp({ layout: v })))) : null,
+      imp.mode !== "none" ? h("p", { class: "hint" }, m.imprintNote) : null);
   }
 
   const STEPS = [
@@ -301,8 +314,8 @@
     {
       id: "imprint",
       title: "Imprint",
-      summary: () => ({ one: "One side", same: "2 sides, same", different: "Front & back" })[state.sides] +
-        (state.sides === "different" ? "" : " · " + ({ none: "Blank", text: "Text", logo: "Logo", both: "Logo + text" })[state.front.mode]),
+      summary: () => ({ none: "Blank", text: "Text", logo: "Logo", both: "Logo + text" })[state.front.mode] +
+        ({ one: "", same: ", 2 sides", different: ", front & back" })[state.sides],
       body: imprintForm,
     },
   ];

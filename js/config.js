@@ -14,6 +14,8 @@ window.LANYARD_CONFIG = {
       blurb: "Ribbed flat polyester with screen-printed spot colours. Our most popular, budget-friendly option.",
       swatch: "assets/materials/silkscreen-on-flat.jpg",
       texture: "flat",
+      imprintNote: "Printed in solid spot colours (PMS matched).",
+      fullColourLogo: false,
     },
     {
       id: "woven-polyester",
@@ -22,6 +24,8 @@ window.LANYARD_CONFIG = {
       blurb: "Your design is woven into the fabric. Premium feel that never fades or peels.",
       swatch: "assets/materials/coarse-woven-on-polyester.jpg",
       texture: "woven",
+      imprintNote: "Woven thread colours. Best for bold text and simple logos.",
+      fullColourLogo: false,
     },
     {
       id: "dye-sub-satin",
@@ -32,6 +36,8 @@ window.LANYARD_CONFIG = {
       texture: "satin",
       badge: "Full-colour designs",
       designs: true,
+      imprintNote: "Full colour. Logos print exactly as uploaded.",
+      fullColourLogo: true,
     },
   ],
 
