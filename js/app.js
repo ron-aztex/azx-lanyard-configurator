@@ -318,6 +318,19 @@
         ({ one: "", same: ", 2 sides", different: ", front & back" })[state.sides],
       body: imprintForm,
     },
+    {
+      // Plain HTML for now: nothing here is wired up yet.
+      id: "breakaway",
+      title: "Safety breakaway",
+      summary: () => "No breakaway",
+      body: () => h("div", {},
+        h("p", {}, "Releases at the back of the neck if the lanyard is pulled. Recommended for events, schools and workplaces."),
+        h("fieldset", {}, h("legend", {}, "Safety breakaway"), CFG.breakaways.map((o) =>
+          h("label", {},
+            h("input", { type: "radio", name: "breakaway", value: o.id, checked: o.id === "none" }), " ",
+            o.img ? h("img", { src: o.img, alt: "", width: "120" }) : null, " ",
+            o.name, o.code ? ` (${o.code})` : "", h("br"))))),
+    },
   ];
 
   function set(patch) {

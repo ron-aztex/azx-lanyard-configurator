@@ -41,6 +41,17 @@ window.LANYARD_CONFIG = {
     },
   ],
 
+  // Safety breakaways (Safety breakaway step).
+  breakaways: [
+    { id: "none",     code: "",             name: "No breakaway" },
+    { id: "xba",      code: "XBA",          name: "Breakaway 2",            img: "assets/attachments/xba-breakaway-2.png" },
+    { id: "xba2p",    code: "XBA2P",        name: "Breakaway 2P",           img: "assets/attachments/xba2p-breakaway-2p.png" },
+    { id: "xbasew",   code: "XBASEW",       name: "Breakaway clip, black",  img: "assets/attachments/xbasew-breakaway-clip.png" },
+    { id: "xbasew-w", code: "XBASEW White", name: "Breakaway clip, white",  img: "assets/attachments/xbasew-white-breakaway-clip.png" },
+    { id: "xvel",     code: "XVEL",         name: "Velcro-style breakaway", img: "assets/attachments/xvel-breakaway.png" },
+    { id: "cyl",      code: "CYL-BA",       name: "Cylindrical breakaway",  img: "assets/attachments/cylindrical-breakaway.png" },
+  ],
+
   widths: [
     { id: "3-8", label: '3/8"', inches: 0.375 },
     { id: "1-2", label: '1/2"', inches: 0.5 },
