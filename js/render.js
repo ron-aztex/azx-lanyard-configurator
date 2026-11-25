@@ -151,6 +151,18 @@
     }).join("");
   }
 
+  // Safety breakaway: the part's photo sitting on the strap at the back of the
+  // neck, about as tall as the strap is wide. Mirrored when viewing the back.
+  function breakawaySvg(b, w, yTop, back) {
+    if (!b || !b.box) return "";
+    const [iw, ih, left, top, right, bottom] = b.box;
+    const k = (w * 1.05) / (bottom - top);
+    const x = CX - ((left + right) / 2) * k;
+    const y = yTop - ((bottom - top) * k) / 2 - top * k;
+    const flip = back ? ` transform="translate(${2 * CX} 0) scale(-1 1)"` : "";
+    return `<g${flip} filter="url(#drop)"><image href="${b.img}" x="${x}" y="${y}" width="${iw * k}" height="${ih * k}"/></g>`;
+  }
+
   function renderLanyard(s) {
     const w = s.width.inches * U;
     const tex = TEXTURES[s.material.texture];
@@ -192,6 +204,7 @@
           ${band("url(#tex)", `opacity="${tex.opacity}" style="mix-blend-mode:multiply"`)}
           ${band(shade(s.strapColour, 0.18), `stroke-width="${w * 0.12}" opacity=".25" transform="translate(${-w * 0.3} 0)"`)}
         </g>
+        ${breakawaySvg(s.breakaway, w, yTop, s.side === "back")}
         ${hook}
       </svg>`;
   }

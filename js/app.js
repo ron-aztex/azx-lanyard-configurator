@@ -17,6 +17,7 @@
     photo: null,
     photoAspect: 1,
     photoName: "",
+    breakaway: "none",
     // Imprint: "Print on", the imprint type, text and logo are wired up so far.
     sides: "one",
     front: { mode: "text", text: "YOUR BRAND", font: "arial", bold: true, colour: "#f4f4f2", size: "m", spacing: "normal", layout: "repeat", logo: null, logoAspect: 1, logoName: "", logoTint: null },
@@ -46,6 +47,8 @@
         ? { style: state.designStyle, colour2: state.colour2, photo: state.photo, photoAspect: state.photoAspect }
         : { style: "solid", colour2: state.colour2 },
       imprint: imprintFor(ui.side),
+      side: ui.side,
+      breakaway: byId(CFG.breakaways, state.breakaway),
     };
   };
 
@@ -319,15 +322,17 @@
       body: imprintForm,
     },
     {
-      // Plain HTML for now: nothing here is wired up yet.
+      // Plain HTML for now. Only No breakaway, XBA and CYL-BA are wired up;
+      // the others are greyed out until they are.
       id: "breakaway",
       title: "Safety breakaway",
-      summary: () => "No breakaway",
+      summary: () => byId(CFG.breakaways, state.breakaway).name,
       body: () => h("div", {},
         h("p", {}, "Releases at the back of the neck if the lanyard is pulled. Recommended for events, schools and workplaces."),
         h("fieldset", {}, h("legend", {}, "Safety breakaway"), CFG.breakaways.map((o) =>
           h("label", {},
-            h("input", { type: "radio", name: "breakaway", value: o.id, checked: o.id === "none" }), " ",
+            h("input", { type: "radio", name: "breakaway", value: o.id, checked: o.id === state.breakaway,
+              disabled: o.id !== "none" && !o.box, onchange: () => set({ breakaway: o.id }) }), " ",
             o.img ? h("img", { src: o.img, alt: "", width: "120" }) : null, " ",
             o.name, o.code ? ` (${o.code})` : "", h("br"))))),
     },
