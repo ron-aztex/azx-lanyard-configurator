@@ -332,7 +332,7 @@
         h("fieldset", {}, h("legend", {}, "Safety breakaway"), CFG.breakaways.map((o) =>
           h("label", {},
             h("input", { type: "radio", name: "breakaway", value: o.id, checked: o.id === state.breakaway,
-              disabled: o.id !== "none" && !o.box, onchange: () => set({ breakaway: o.id }) }), " ",
+              onchange: () => set({ breakaway: o.id }) }), " ",
             o.img ? h("img", { src: o.img, alt: "", width: "120" }) : null, " ",
             o.name, o.code ? ` (${o.code})` : "", h("br"))))),
     },

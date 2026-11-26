@@ -41,16 +41,15 @@ window.LANYARD_CONFIG = {
     },
   ],
 
-  // Safety breakaways (Safety breakaway step). Only those with a "box" are wired
-  // up so far; box = the image's [width, height, visible left, top, right, bottom]
-  // in pixels, used to place the part on the preview.
+  // Safety breakaways (Safety breakaway step). box = the image's
+  // [width, height, visible left, top, right, bottom], in pixels, used to place the part on the preview
   breakaways: [
     { id: "none",     code: "",             name: "No breakaway" },
     { id: "xba",      code: "XBA",          name: "Breakaway 2",            img: "assets/attachments/xba-breakaway-2.png", box: [301, 109, 66, 0, 235, 75] },
-    { id: "xba2p",    code: "XBA2P",        name: "Breakaway 2P",           img: "assets/attachments/xba2p-breakaway-2p.png" },
-    { id: "xbasew",   code: "XBASEW",       name: "Breakaway clip, black",  img: "assets/attachments/xbasew-breakaway-clip.png" },
-    { id: "xbasew-w", code: "XBASEW White", name: "Breakaway clip, white",  img: "assets/attachments/xbasew-white-breakaway-clip.png" },
-    { id: "xvel",     code: "XVEL",         name: "Velcro-style breakaway", img: "assets/attachments/xvel-breakaway.png" },
+    { id: "xba2p",    code: "XBA2P",        name: "Breakaway 2P",           img: "assets/attachments/xba2p-breakaway-2p.png", box: [301, 108, 74, 0, 227, 74] },
+    { id: "xbasew",   code: "XBASEW",       name: "Breakaway clip, black",  img: "assets/attachments/xbasew-breakaway-clip.png", box: [301, 109, 75, 0, 226, 76] },
+    { id: "xbasew-w", code: "XBASEW White", name: "Breakaway clip, white",  img: "assets/attachments/xbasew-white-breakaway-clip.png", box: [301, 109, 78, 2, 223, 75] },
+    { id: "xvel",     code: "XVEL",         name: "Velcro-style breakaway", img: "assets/attachments/xvel-breakaway.png", box: [301, 127, 88, 0, 213, 93] },
     { id: "cyl",      code: "CYL-BA",       name: "Cylindrical breakaway",  img: "assets/attachments/cylindrical-breakaway.png", box: [301, 91, 55, 1, 246, 59] },
   ],
 
