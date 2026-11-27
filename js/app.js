@@ -194,6 +194,16 @@
   }
 
   // Imprint step: what's printed, per side when front and back differ.
+  // Product photo cropped to its visible part (box) and centred in a size×size square.
+  function thumb(o, size) {
+    if (!o.img) return h("span", { class: "thumb thumb-none", style: `width:${size}px;height:${size}px` }, "None");
+    const [w, ht, left, top, right, bottom] = o.box;
+    const k = Math.min((size - 12) / (right - left), (size - 12) / (bottom - top));
+    return h("span", { class: "thumb", style: `width:${size}px;height:${size}px` },
+      h("img", { src: o.img, alt: "", draggable: "false",
+        style: `width:${w * k}px;height:${ht * k}px;left:${size / 2 - ((left + right) / 2) * k}px;top:${size / 2 - ((top + bottom) / 2) * k}px` }));
+  }
+
   function imprintForm() {
     const m = resolved().material;
     const side = state.sides === "different" ? ui.editSide : "front";
@@ -328,13 +338,17 @@
       title: "Safety breakaway",
       summary: () => byId(CFG.breakaways, state.breakaway).name,
       body: () => h("div", {},
-        h("p", {}, "Releases at the back of the neck if the lanyard is pulled. Recommended for events, schools and workplaces."),
-        h("fieldset", {}, h("legend", {}, "Safety breakaway"), CFG.breakaways.map((o) =>
-          h("label", {},
-            h("input", { type: "radio", name: "breakaway", value: o.id, checked: o.id === state.breakaway,
-              onchange: () => set({ breakaway: o.id }) }), " ",
-            o.img ? h("img", { src: o.img, alt: "", width: "120" }) : null, " ",
-            o.name, o.code ? ` (${o.code})` : "", h("br"))))),
+        h("p", { class: "hint" }, "Releases at the back of the neck if the lanyard is pulled. Recommended for events, schools and workplaces."),
+        h("div", { class: "tiles" }, CFG.breakaways.map((o) => {
+          const on = o.id === state.breakaway;
+          return h("button", {
+            type: "button", class: "tile" + (on ? " is-selected" : ""), "aria-pressed": String(on),
+            title: o.code ? `${o.name} (${o.code})` : o.name, onclick: () => set({ breakaway: o.id }),
+          },
+            thumb(o, 76),
+            h("span", { class: "tile-name" }, o.name),
+            o.code ? h("span", { class: "tile-code" }, o.code) : null);
+        }))),
     },
   ];
 
