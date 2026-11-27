@@ -344,6 +344,7 @@
           return h("button", {
             type: "button", class: "tile" + (on ? " is-selected" : ""), "aria-pressed": String(on),
             title: o.code ? `${o.name} (${o.code})` : o.name, onclick: () => set({ breakaway: o.id }),
+            onmouseenter: () => peek("breakaway", o.id), onmouseleave: () => peek(null),
           },
             thumb(o, 76),
             h("span", { class: "tile-name" }, o.name),
@@ -365,6 +366,20 @@
           h("h2", { class: "step-title" }, step.title),
           h("span", { class: "step-summary" }, step.summary())),
         h("div", { class: "step-body" }, step.body()))));
+  }
+
+  // Hover preview: show an option on the lanyard without picking it (mouse only).
+  let peekTimer;
+  function peek(key, id) {
+    clearTimeout(peekTimer);
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    peekTimer = setTimeout(() => {
+      if (!key) { renderPreview(); return; }
+      const saved = state[key];
+      state[key] = id;
+      renderPreview();
+      state[key] = saved;
+    }, key ? 120 : 60);
   }
 
   function renderPreview() {
