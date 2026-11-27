@@ -53,6 +53,23 @@ window.LANYARD_CONFIG = {
     { id: "cyl",      code: "CYL-BA",       name: "Cylindrical breakaway",  img: "assets/attachments/cylindrical-breakaway.png", box: [301, 91, 55, 1, 246, 59] },
   ],
 
+  // Fittings step (plain HTML so far, not drawn on the preview yet).
+  // End finish: where the strap meets the hook.
+  endFinishes: [
+    { id: "sewn",        code: "",            name: "Sewn (standard)" },
+    { id: "crimp-l",     code: "CRIMP-L",     name: "Crimp, silver, large", img: "assets/attachments/crimped-large.png" },
+    { id: "crimp-s",     code: "CRIMP-S",     name: "Crimp, silver, small", img: "assets/attachments/crimped-small.png" },
+    { id: "crimp-blk-l", code: "CRIMP-BLK-L", name: "Crimp, black, large",  img: "assets/attachments/crimped-blk-large.png" },
+    { id: "crimp-blk-s", code: "CRIMP-BLK-S", name: "Crimp, black, small",  img: "assets/attachments/crimped-blk-small.png" },
+  ],
+  // Slider or bead: slides on both strands just above where they join (adjusts the drop).
+  adjusters: [
+    { id: "none",        code: "",         name: "None" },
+    { id: "slider",      code: "SLIDER",   name: "Slider",      img: "assets/attachments/slider.png" },
+    { id: "bead-black",  code: "BEAD-BLK", name: "Black bead",  img: "assets/attachments/black-bead.png" },
+    { id: "bead-silver", code: "BEAD-SLV", name: "Silver bead", img: "assets/attachments/silver-bead.png" },
+  ],
+
   widths: [
     { id: "3-8", label: '3/8"', inches: 0.375 },
     { id: "1-2", label: '1/2"', inches: 0.5 },

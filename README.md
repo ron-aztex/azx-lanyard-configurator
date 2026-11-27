@@ -17,7 +17,8 @@ npx serve .
 - [x] Step 3, Colour & design: 17 colours + custom, second colour, 9 designs on dye-sub incl. your own image, styled like the design (design tiles, round swatches, upload drop zone); the preview draws them
 - [x] Imprint (text + logo): styled like the design and fully working (print on, type, text/font/bold, logo upload, logo colours, imprint colour, size, spacing, layout; front and back separately)
 - [x] Safety breakaway: 7 picture tiles styled like the design; all 7 work (drawn at the back of the neck); hovering a tile previews it
-- [ ] Hardware: end finish, buckle, attachment, add-ons
+- [ ] Fittings: plain HTML (end finish + slider/bead radios with product images); not working yet
+- [ ] Hardware: buckle, attachment, add-ons
 - [ ] Worn view
 - [ ] Quote form, share link, PDF proof
 

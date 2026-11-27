@@ -18,6 +18,8 @@
     photoAspect: 1,
     photoName: "",
     breakaway: "none",
+    endFinish: "crimp-l",
+    adjuster: "none",
     // Imprint: "Print on", the imprint type, text and logo are wired up so far.
     sides: "one",
     front: { mode: "text", text: "YOUR BRAND", font: "arial", bold: true, colour: "#f4f4f2", size: "m", spacing: "normal", layout: "repeat", logo: null, logoAspect: 1, logoName: "", logoTint: null },
@@ -204,6 +206,15 @@
         style: `width:${w * k}px;height:${ht * k}px;left:${size / 2 - ((left + right) / 2) * k}px;top:${size / 2 - ((top + bottom) / 2) * k}px` }));
   }
 
+  // Plain radio list (no styling, no behaviour yet).
+  function plainChoices(legend, key, list) {
+    return h("fieldset", {}, h("legend", {}, legend), list.map((o) =>
+      h("label", {},
+        h("input", { type: "radio", name: key, value: o.id, checked: o.id === state[key] }), " ",
+        o.img ? h("img", { src: o.img, alt: "", width: "120" }) : null, " ",
+        o.name, o.code ? ` (${o.code})` : "", h("br"))));
+  }
+
   function imprintForm() {
     const m = resolved().material;
     const side = state.sides === "different" ? ui.editSide : "front";
@@ -350,6 +361,15 @@
             h("span", { class: "tile-name" }, o.name),
             o.code ? h("span", { class: "tile-code" }, o.code) : null);
         }))),
+    },
+    {
+      id: "fittings",
+      title: "Fittings",
+      summary: () => byId(CFG.endFinishes, state.endFinish).name.split(",")[0] +
+        (state.adjuster !== "none" ? " + " + byId(CFG.adjusters, state.adjuster).name.toLowerCase() : ""),
+      body: () => h("div", {},
+        plainChoices("End finish (where the strap meets the hook)", "endFinish", CFG.endFinishes),
+        plainChoices("Slider or bead (adjusts the drop)", "adjuster", CFG.adjusters)),
     },
   ];
 
